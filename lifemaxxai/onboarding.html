@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Lifemaxx AI — Build your plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --text-primary:#FAFAFA;--text-secondary:#B8B6B0;--text-tertiary:#76746E;
+  --accent:#A78BFA;
+  --font:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:#050506;color:var(--text-secondary);font-family:var(--font);-webkit-font-smoothing:antialiased;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle at 82% 12%,rgba(167,139,250,0.18),transparent 45%),radial-gradient(circle at 16% 90%,rgba(125,211,252,0.07),transparent 50%);filter:blur(40px);pointer-events:none;z-index:-1;animation:drift 36s ease-in-out infinite alternate;}
+@keyframes drift{0%{transform:translate3d(0,0,0)}100%{transform:translate3d(-22px,14px,0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+.app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:max(36px,env(safe-area-inset-top)) 24px max(32px,env(safe-area-inset-bottom));}
+
+/* header */
+.header{display:flex;align-items:center;gap:16px;margin-bottom:30px;animation:fadeUp .38s ease both;}
+.orb{width:54px;height:54px;flex-shrink:0;border-radius:50%;background:radial-gradient(circle at 32% 28%,#EDE9FE,var(--accent) 48%,#6D28D9 100%);box-shadow:0 0 30px -4px rgba(167,139,250,.65);animation:float 4s ease-in-out infinite;}
+.header-copy{min-width:0;}
+.title{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:400;font-size:30px;line-height:1.1;color:var(--text-primary);}
+.subtitle{margin:4px 0 0;font-size:13px;color:var(--text-tertiary);line-height:1.45;}
+
+/* form */
+form{display:flex;flex-direction:column;gap:14px;flex:1;animation:fadeUp .42s .06s ease both;opacity:0;animation-fill-mode:forwards;}
+
+.field{display:flex;flex-direction:column;gap:7px;}
+.field label{font-size:11.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-tertiary);}
+.hint{font-size:11.5px;color:var(--text-tertiary);margin-top:-2px;}
+
+.inp{width:100%;padding:15px 16px;border-radius:14px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.08);color:var(--text-primary);font-family:inherit;font-size:17px;outline:none;transition:border-color .15s,background .15s;-webkit-appearance:none;appearance:none;}
+.inp:focus{border-color:var(--accent);background:rgba(255,255,255,0.055);}
+.inp::placeholder{color:var(--text-tertiary);}
+
+/* two-column layout */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* unit row (input + seg toggle) */
+.inp-row{display:flex;gap:8px;align-items:stretch;}
+.inp-row .inp{flex:1;min-width:0;}
+
+/* segmented unit toggle (vertical stacked buttons) */
+.unit-seg{display:inline-flex;flex-direction:column;border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;flex-shrink:0;min-width:46px;}
+.unit-seg button{border:0;background:transparent;color:var(--text-tertiary);font-family:inherit;font-size:12px;font-weight:700;padding:0 12px;cursor:pointer;transition:background .15s,color .15s;flex:1;display:flex;align-items:center;justify-content:center;line-height:1;}
+.unit-seg button.on{background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--text-primary);}
+
+/* sex segmented (horizontal) */
+.sex-seg{display:flex;border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;height:52px;}
+.sex-seg button{border:0;background:transparent;color:var(--text-tertiary);font-family:inherit;font-size:13px;font-weight:600;flex:1;cursor:pointer;transition:background .15s,color .15s;padding:0;}
+.sex-seg button.on{background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--text-primary);}
+
+/* error */
+.form-error{font-size:12.5px;color:#F87171;display:none;padding:10px 14px;border-radius:10px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);}
+.form-error.show{display:block;}
+
+/* cta */
+.cta{width:100%;padding:16px;border:0;border-radius:14px;background:linear-gradient(180deg,#FFFFFF,#E8E5DD);color:#0A0A0B;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,0.9),0 8px 24px rgba(0,0,0,0.28);transition:filter .15s,transform .1s,opacity .15s;margin-top:6px;letter-spacing:-0.01em;}
+.cta:hover{filter:brightness(1.04);}
+.cta:active{transform:translateY(1px);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="orb"></div>
+    <div class="header-copy">
+      <h1 class="title">Let's build your plan.</h1>
+      <p class="subtitle">Your numbers, your targets — calculated instantly.</p>
+    </div>
+  </div>
+
+  <form id="form" novalidate>
+
+    <div class="field">
+      <label for="fname">Your name</label>
+      <input class="inp" type="text" id="fname" placeholder="First name" autocomplete="given-name" autocorrect="off" autocapitalize="words">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="age">Age</label>
+        <input class="inp" type="number" id="age" placeholder="25" min="13" max="100" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>Sex</label>
+        <div class="sex-seg" id="sexSeg" role="group" aria-label="Biological sex">
+          <button type="button" data-v="m">Male</button>
+          <button type="button" data-v="f">Female</button>
+          <button type="button" data-v="n" title="Prefer not to say">—</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Height</label>
+      <div class="inp-row">
+        <input class="inp" type="number" id="hcm" placeholder="178" inputmode="numeric">
+        <input class="inp" type="number" id="hft" placeholder="5" inputmode="numeric" style="display:none">
+        <input class="inp" type="number" id="hin" placeholder="11" inputmode="numeric" style="display:none">
+        <div class="unit-seg" id="hUnit">
+          <button type="button" data-u="cm" class="on">cm</button>
+          <button type="button" data-u="ft">ft</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Weight</label>
+      <div class="inp-row">
+        <input class="inp" type="number" id="winp" placeholder="75" inputmode="decimal" step="0.1">
+        <div class="unit-seg" id="wUnit">
+          <button type="button" data-u="kg" class="on">kg</button>
+          <button type="button" data-u="lb">lb</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="active">Active hours / week</label>
+      <input class="inp" type="number" id="active" placeholder="5" min="0" max="60" step="0.5" inputmode="decimal">
+      <span class="hint">Hours spent exercising or training per week</span>
+    </div>
+
+    <div id="formErr" class="form-error"></div>
+
+    <button class="cta" type="submit">Continue to Sign In →</button>
+
+  </form>
+
+</div>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+
+  let heightUnit = 'cm';
+  let weightUnit = 'kg';
+  let sex = '';
+
+  function wireUnitSeg(segId, onChange) {
+    $(segId).querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        $(segId).querySelectorAll('button').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        onChange(b.dataset.u);
+      });
+    });
+  }
+
+  wireUnitSeg('hUnit', u => {
+    heightUnit = u;
+    const cm = u === 'cm';
+    $('hcm').style.display = cm ? '' : 'none';
+    $('hft').style.display = cm ? 'none' : '';
+    $('hin').style.display = cm ? 'none' : '';
+  });
+
+  wireUnitSeg('wUnit', u => { weightUnit = u; });
+
+  $('sexSeg').querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      $('sexSeg').querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      sex = b.dataset.v;
+    });
+  });
+
+  function getHeightCm() {
+    if (heightUnit === 'cm') {
+      const v = parseFloat($('hcm').value);
+      return v > 0 ? Math.round(v) : null;
+    }
+    const ft = parseFloat($('hft').value) || 0;
+    const inch = parseFloat($('hin').value) || 0;
+    const cm = ft * 30.48 + inch * 2.54;
+    return cm > 0 ? Math.round(cm) : null;
+  }
+
+  function getWeightKg() {
+    const v = parseFloat($('winp').value);
+    if (!(v > 0)) return null;
+    return weightUnit === 'lb' ? +(v / 2.20462).toFixed(1) : v;
+  }
+
+  function showErr(msg) {
+    const el = $('formErr');
+    el.textContent = msg;
+    el.classList.add('show');
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  $('form').addEventListener('submit', e => {
+    e.preventDefault();
+    $('formErr').classList.remove('show');
+
+    const name = $('fname').value.trim();
+    const age = parseInt($('age').value, 10);
+    const heightCm = getHeightCm();
+    const weightKg = getWeightKg();
+    const activeHours = parseFloat($('active').value);
+
+    if (!name)                              return showErr('Please enter your name.');
+    if (!age || age < 13 || age > 100)      return showErr('Please enter a valid age (13–100).');
+    if (!sex)                               return showErr('Please select your biological sex.');
+    if (!heightCm || heightCm < 100 || heightCm > 260) return showErr('Please enter a valid height.');
+    if (!weightKg || weightKg < 20 || weightKg > 350)  return showErr('Please enter a valid weight.');
+    if (isNaN(activeHours) || activeHours < 0 || activeHours > 60) return showErr('Please enter active hours (0–60).');
+
+    try {
+      localStorage.setItem('pendingOnboardingData', JSON.stringify({
+        name, age, sex, heightCm, weightKg, activeHoursPerWeek: activeHours
+      }));
+    } catch (_) {}
+
+    window.location.href = 'login.html';
+  });
+})();
+</script>
+</body>
+</html>
