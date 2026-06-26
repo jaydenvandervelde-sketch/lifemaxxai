@@ -963,5 +963,13 @@ applyTheme(currentTheme);
   document.addEventListener('mouseout',function(e){ var c=e.target.closest&&e.target.closest('.bento .card'); if(c){ var art=c.querySelector('.cardArtIcon'); if(art)art.style.transform=''; } });
 })();
 </script>
+<script>
+(async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+        window.location.href = "onboarding.html";
+    }
+})();
+</script>
 </body>
 </html>
