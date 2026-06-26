@@ -2,16 +2,9 @@
 <html lang="en">
 <head>
 <script>
-  window.addEventListener('DOMContentLoaded', () => {
-    const btn = document.querySelector('button') || document.querySelector('.btn') || document.getElementById('next');
-    if (btn) {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.location.href = '/login.html';
-      }, true);
-    }
-  });
+  if (!window.location.search.includes('step=1')) {
+    window.location.href = '/login.html';
+  }
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
