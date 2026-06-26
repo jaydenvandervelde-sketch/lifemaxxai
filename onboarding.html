@@ -1,7 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>if(!window.location.search.includes('step')){ window.location.href = '/login.html'; }</script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const btn = document.querySelector('button') || document.querySelector('.btn') || document.getElementById('next');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.location.href = '/login.html';
+      }, true);
+    }
+  });
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#050506">
