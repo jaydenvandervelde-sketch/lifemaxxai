@@ -967,7 +967,7 @@ applyTheme(currentTheme);
 (async () => {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) {
-        window.location.href = "onboarding.html";
+        window.location.href = "login.html";
     }
 })();
 </script>
