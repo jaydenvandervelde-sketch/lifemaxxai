@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>if(!window.location.search.includes('step')){ window.location.href = '/login.html'; }</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Lifemaxx AI — Build your plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,300;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --text-primary:#FAFAFA; --text-secondary:#B8B6B0; --text-tertiary:#76746E;
+  --accent:#A78BFA;
+  --font:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:#050506;color:var(--text-secondary);font-family:var(--font);-webkit-font-smoothing:antialiased;min-height:100vh;}
+body{position:relative;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle at 82% 14%,rgba(167,139,250,0.16),transparent 45%),radial-gradient(circle at 18% 90%,rgba(125,211,252,0.06),transparent 50%);filter:blur(40px);pointer-events:none;z-index:-2;animation:drift 36s ease-in-out infinite alternate;}
+@keyframes drift{0%{transform:translate3d(0,0,0)}100%{transform:translate3d(-22px,14px,0)}}
+
+.app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:max(20px,env(safe-area-inset-top)) 22px max(22px,env(safe-area-inset-bottom));}
+
+/* progress */
+.topbar{display:flex;align-items:center;gap:14px;padding:8px 0 22px;}
+.back-btn{width:36px;height:36px;flex-shrink:0;border:0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:var(--text-secondary);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:opacity .15s,background .15s;}
+.back-btn:hover{background:rgba(255,255,255,0.09);}
+.back-btn.hide{visibility:hidden;}
+.back-btn svg{width:18px;height:18px;}
+.progress{flex:1;height:5px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;}
+.progress-fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#7DD3FC,var(--accent));transition:width .45s cubic-bezier(.16,1,.3,1);}
+
+/* screen */
+.screen{flex:1;display:flex;flex-direction:column;animation:fadeUp .42s cubic-bezier(.16,1,.3,1);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:14px;}
+.q-title{margin:0;font-size:27px;line-height:1.2;letter-spacing:-0.02em;color:var(--text-primary);font-weight:700;}
+.q-sub{margin:10px 0 0;font-size:14.5px;line-height:1.5;color:var(--text-tertiary);}
+.q-body{margin-top:26px;display:flex;flex-direction:column;gap:11px;}
+
+/* option cards */
+.opt{display:flex;align-items:center;gap:14px;padding:16px 16px;border-radius:15px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.07);cursor:pointer;transition:border-color .15s,background .15s,transform .1s;-webkit-tap-highlight-color:transparent;}
+.opt:hover{background:rgba(255,255,255,0.06);}
+.opt:active{transform:scale(.99);}
+.opt.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);}
+.opt-ic{width:40px;height:40px;border-radius:11px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);color:var(--accent);}
+.opt.sel .opt-ic{background:color-mix(in srgb,var(--accent) 20%,transparent);}
+.opt-ic svg{width:20px;height:20px;}
+.opt-main{flex:1;min-width:0;}
+.opt-label{font-size:15.5px;font-weight:600;color:var(--text-primary);}
+.opt-desc{font-size:12.5px;color:var(--text-tertiary);margin-top:2px;}
+.opt-check{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:1.5px solid rgba(255,255,255,0.18);display:inline-flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s;}
+.opt.sel .opt-check{background:var(--accent);border-color:var(--accent);}
+.opt-check svg{width:13px;height:13px;color:#1a1530;opacity:0;transition:opacity .15s;}
+.opt.sel .opt-check svg{opacity:1;}
+
+/* inputs */
+.field-input{width:100%;padding:16px 16px;border-radius:14px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.08);color:var(--text-primary);font-family:inherit;font-size:18px;outline:none;transition:border-color .15s;}
+.field-input:focus{border-color:var(--accent);}
+.field-input::placeholder{color:var(--text-tertiary);}
+.dual{display:flex;gap:10px;}
+.dual .field-input{flex:1;}
+.seg{display:inline-flex;border:1.5px solid rgba(255,255,255,0.1);border-radius:14px;overflow:hidden;flex-shrink:0;}
+.seg button{border:0;background:transparent;color:var(--text-tertiary);font-family:inherit;font-size:14px;font-weight:600;padding:0 16px;cursor:pointer;transition:background .15s,color .15s;}
+.seg button.on{background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--text-primary);}
+
+/* footer / continue */
+.footer{padding-top:18px;}
+.cta{width:100%;padding:16px;border:0;border-radius:14px;background:linear-gradient(180deg,#FFFFFF,#E8E5DD);color:#0A0A0B;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,0.9),0 8px 22px rgba(0,0,0,0.25);transition:filter .15s,transform .1s,opacity .15s;}
+.cta:hover{filter:brightness(1.04);}
+.cta:active{transform:translateY(1px);}
+.cta:disabled{opacity:.35;cursor:not-allowed;}
+
+/* intro */
+.intro{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;}
+.intro .orb{width:84px;height:84px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#EDE9FE,var(--accent) 48%,#6D28D9 100%);box-shadow:0 0 40px -4px var(--accent);animation:float 4s ease-in-out infinite;margin-bottom:8px;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.intro h1{margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:400;font-size:40px;line-height:1.1;color:#FAFAFA;}
+.intro p{margin:6px 0 0;font-size:15px;color:var(--text-tertiary);max-width:340px;line-height:1.55;}
+
+/* loading */
+.loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.loading .orb{width:70px;height:70px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#EDE9FE,var(--accent) 48%,#6D28D9 100%);box-shadow:0 0 40px -4px var(--accent);animation:float 1.4s ease-in-out infinite,pulse 1.4s ease-in-out infinite;margin-bottom:26px;}
+@keyframes pulse{0%,100%{box-shadow:0 0 40px -4px var(--accent)}50%{box-shadow:0 0 56px 2px var(--accent)}}
+.loading h2{margin:0 0 30px;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:400;font-size:30px;color:#FAFAFA;}
+.load-steps{display:flex;flex-direction:column;gap:14px;width:100%;max-width:330px;text-align:left;}
+.load-row{display:flex;align-items:center;gap:12px;font-size:14.5px;color:var(--text-tertiary);opacity:.4;transition:opacity .4s,color .4s;}
+.load-row.active{opacity:1;color:var(--text-secondary);}
+.load-row.done{opacity:1;color:var(--text-secondary);}
+.load-ic{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,0.12);}
+.load-row.done .load-ic{background:var(--accent);border-color:var(--accent);}
+.load-row.active .load-ic{border-color:var(--accent);}
+.load-ic svg{width:13px;height:13px;color:#1a1530;opacity:0;}
+.load-row.done .load-ic svg{opacity:1;}
+.load-spin{width:13px;height:13px;border:2px solid rgba(167,139,250,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:none;}
+.load-row.active .load-spin{display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* reveal */
+.reveal{flex:1;display:flex;flex-direction:column;animation:fadeUp .5s cubic-bezier(.16,1,.3,1);}
+.reveal-badge{align-self:center;font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);padding:7px 14px;border-radius:99px;margin-bottom:16px;}
+.reveal h2{margin:0;text-align:center;font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:400;font-size:32px;line-height:1.15;color:#FAFAFA;}
+.reveal-proj{margin:16px 0 0;text-align:center;font-size:14px;color:var(--text-tertiary);}
+.reveal-proj b{color:var(--accent);font-weight:700;}
+.reveal-name{color:var(--accent);}
+.target-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:24px;}
+.target{padding:16px 12px;border-radius:15px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);text-align:center;}
+.target .v{font-size:24px;font-weight:700;color:var(--text-primary);font-variant-numeric:tabular-nums;line-height:1;}
+.target .u{font-size:11px;color:var(--text-tertiary);margin-top:3px;}
+.target .l{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text-tertiary);margin-top:9px;}
+.sections-head{margin:26px 0 12px;font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-tertiary);}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;color:var(--text-secondary);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:99px;padding:8px 13px;}
+.chip svg{width:14px;height:14px;color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar" id="topbar">
+    <button class="back-btn hide" id="backBtn" type="button" aria-label="Back"><i data-lucide="arrow-left"></i></button>
+    <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <div id="stage"></div>
+
+  <div class="footer" id="footer">
+    <button class="cta" id="cta" type="button">Continue</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const PROFILE_KEY = 'lm_profile_v1';
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  // ---------- state ----------
+  const state = {
+    goals: [], name: '', sex: '', age: null,
+    heightCm: null, heightUnit: 'cm',
+    weightKg: null, weightUnit: 'kg', goalWeightKg: null,
+    activity: '', faith: '', platforms: [],
+  };
+
+  // ---------- goal catalog (drives modules later) ----------
+  const GOALS = [
+    { id:'lose_weight',   label:'Lose weight',         desc:'Shed fat, stay lean',        icon:'flame' },
+    { id:'build_muscle',  label:'Build muscle',        desc:'Gain strength & size',       icon:'dumbbell' },
+    { id:'eat_healthier', label:'Eat healthier',       desc:'Better food, more energy',   icon:'salad' },
+    { id:'sleep_better',  label:'Sleep & recover',     desc:'Rest, recovery, energy',     icon:'moon' },
+    { id:'track_finance', label:'Track my finances',   desc:'Spending & net worth',       icon:'trending-up' },
+    { id:'build_business',label:'Start / grow a business', desc:'Revenue, focus, shipping', icon:'rocket' },
+    { id:'creator',       label:'Grow as a creator',   desc:'Content, audience, posting', icon:'clapperboard' },
+    { id:'faith',         label:'Strengthen my faith', desc:'Daily spiritual practice',   icon:'heart' },
+    { id:'discipline',    label:'Build discipline',    desc:'Habits & streaks',           icon:'target' },
+    { id:'screentime',    label:'Cut screen time',     desc:'Less phone, more focus',     icon:'smartphone' },
+  ];
+  const ACTIVITY = [
+    { id:'sedentary', label:'Mostly sitting',  desc:'Little exercise',          factor:1.3 },
+    { id:'light',     label:'Lightly active',  desc:'1-3 workouts / week',      factor:1.45 },
+    { id:'moderate',  label:'Active',          desc:'3-5 workouts / week',      factor:1.6 },
+    { id:'high',      label:'Very active',     desc:'6+ workouts / week',       factor:1.75 },
+    { id:'athlete',   label:'Athlete',         desc:'Training is my life',      factor:1.9 },
+  ];
+  const PLATFORMS = [
+    { id:'instagram', label:'Instagram', icon:'instagram' },
+    { id:'tiktok',    label:'TikTok',    icon:'music' },
+    { id:'youtube',   label:'YouTube',   icon:'youtube' },
+    { id:'x',         label:'X / Twitter', icon:'twitter' },
+  ];
+
+  // ---------- step definitions ----------
+  const STEPS = [
+    { id:'intro', type:'intro' },
+    { id:'goals', type:'multi', key:'goals', min:1,
+      eyebrow:'Step 1', title:'What do you want to do with Lifemaxx?', sub:'Pick everything that matters. This shapes your whole dashboard.',
+      options:GOALS },
+    { id:'name', type:'text', key:'name', eyebrow:'About you', title:"First, what should we call you?", placeholder:'Your first name' },
+    { id:'sex', type:'single', key:'sex', eyebrow:'About you', title:'What’s your biological sex?', sub:'Used to calculate your metabolism accurately.',
+      options:[{id:'m',label:'Male',icon:'mars'},{id:'f',label:'Female',icon:'venus'},{id:'n',label:'Prefer not to say',icon:'circle-question'}] },
+    { id:'age', type:'number', key:'age', eyebrow:'About you', title:'How old are you?', placeholder:'Age', suffix:'years', min:13, max:100 },
+    { id:'height', type:'height', eyebrow:'About you', title:'How tall are you?' },
+    { id:'weight', type:'weight', key:'weightKg', eyebrow:'About you', title:'What’s your current weight?' },
+    { id:'activity', type:'single', key:'activity', eyebrow:'About you', title:'How active are you?', sub:'Be honest — it sets your calorie target.', options:ACTIVITY },
+    { id:'goalweight', type:'weight', key:'goalWeightKg', eyebrow:'Your target', title:'What’s your goal weight?', when:s=>s.goals.includes('lose_weight')||s.goals.includes('build_muscle') },
+    { id:'faith', type:'single', key:'faith', eyebrow:'Your faith', title:'Which tradition should we tailor to?', sub:'So your faith section fits you. Always optional.',
+      options:[{id:'christian',label:'Christian',desc:'Verse, devotion, reading plan',icon:'cross'},{id:'muslim',label:'Muslim',desc:'Prayer times, fasting, Quran',icon:'moon'},{id:'other',label:'Prefer not to say',desc:'A general spiritual space',icon:'sparkles'}],
+      when:s=>s.goals.includes('faith') },
+    { id:'platforms', type:'multi', key:'platforms', min:0, eyebrow:'Your content', title:'Where do you create?', sub:'Pick your platforms.',
+      options:PLATFORMS, when:s=>s.goals.includes('creator')||s.goals.includes('build_business') },
+    { id:'loading', type:'loading' },
+    { id:'reveal', type:'reveal' },
+  ];
+
+  function activeSteps(){ return STEPS.filter(s => !s.when || s.when(state)); }
+  let pos = 0;
+
+  // ---------- render ----------
+  const stage = $('stage'), footer = $('footer');
+  let cta = $('cta');
+
+  function render(){
+    const steps = activeSteps();
+    pos = Math.max(0, Math.min(pos, steps.length-1));
+    const step = steps[pos];
+    $('progressFill').style.width = Math.round((pos)/(steps.length-1)*100) + '%';
+    $('backBtn').classList.toggle('hide', pos === 0 || step.type==='loading' || step.type==='reveal');
+    footer.style.display = (step.type==='loading'||step.type==='reveal') ? 'none' : 'block';
+
+    if (step.type==='intro') return renderIntro();
+    // Restore plain button for all non-intro steps (in case we came from intro)
+    if (footer.querySelector('a')) {
+      footer.innerHTML = '<button class="cta" id="cta" type="button">Continue</button>';
+      cta = $('cta');
+      cta.addEventListener('click', onCtaClick);
+    }
+    if (step.type==='loading') return renderLoading();
+    if (step.type==='reveal') return renderReveal();
+
+    let body = '';
+    if (step.type==='multi' || step.type==='single') {
+      body = '<div class="q-body">' + step.options.map(o => optionHTML(step, o)).join('') + '</div>';
+    } else if (step.type==='text') {
+      body = '<div class="q-body"><input class="field-input" id="inp" type="text" placeholder="'+step.placeholder+'" autocomplete="off" value="'+(state[step.key]||'')+'"></div>';
+    } else if (step.type==='number') {
+      body = '<div class="q-body"><div class="dual"><input class="field-input" id="inp" type="number" inputmode="numeric" placeholder="'+step.placeholder+'" value="'+(state[step.key]||'')+'"><div class="seg"><button class="on" disabled>'+step.suffix+'</button></div></div></div>';
+    } else if (step.type==='height') {
+      body = heightHTML();
+    } else if (step.type==='weight') {
+      body = weightHTML(step);
+    }
+
+    stage.innerHTML =
+      '<div class="screen">' +
+        '<div class="eyebrow">'+(step.eyebrow||'')+'</div>' +
+        '<h2 class="q-title">'+step.title+'</h2>' +
+        (step.sub ? '<p class="q-sub">'+step.sub+'</p>' : '') +
+        body +
+      '</div>';
+
+    wireStep(step);
+    if (window.lucide) lucide.createIcons();
+    updateCTA(step);
+  }
+
+  function optionHTML(step, o){
+    const arr = state[step.key] || [];
+    const sel = step.type==='multi' ? arr.includes(o.id) : state[step.key]===o.id;
+    return '<div class="opt'+(sel?' sel':'')+'" data-id="'+o.id+'">' +
+      (o.icon ? '<span class="opt-ic"><i data-lucide="'+o.icon+'"></i></span>' : '') +
+      '<div class="opt-main"><div class="opt-label">'+o.label+'</div>'+(o.desc?'<div class="opt-desc">'+o.desc+'</div>':'')+'</div>' +
+      '<span class="opt-check">'+CHECK+'</span>' +
+    '</div>';
+  }
+
+  function heightHTML(){
+    if (state.heightUnit==='ft'){
+      const totalIn = state.heightCm ? state.heightCm/2.54 : 0;
+      const ft = totalIn ? Math.floor(totalIn/12) : '';
+      const inch = totalIn ? Math.round(totalIn%12) : '';
+      return '<div class="q-body"><div class="dual">'+
+        '<input class="field-input" id="hft" type="number" inputmode="numeric" placeholder="ft" value="'+ft+'">'+
+        '<input class="field-input" id="hin" type="number" inputmode="numeric" placeholder="in" value="'+inch+'">'+
+        unitSeg('height',['cm','ft'])+'</div></div>';
+    }
+    return '<div class="q-body"><div class="dual">'+
+      '<input class="field-input" id="hcm" type="number" inputmode="numeric" placeholder="cm" value="'+(state.heightCm||'')+'">'+
+      unitSeg('height',['cm','ft'])+'</div></div>';
+  }
+  function weightHTML(step){
+    const isLb = state.weightUnit==='lb';
+    const v = state[step.key] ? (isLb ? Math.round(state[step.key]*2.20462) : Math.round(state[step.key])) : '';
+    return '<div class="q-body"><div class="dual">'+
+      '<input class="field-input" id="winp" type="number" inputmode="decimal" placeholder="weight" value="'+v+'" data-key="'+step.key+'">'+
+      unitSeg('weight',['kg','lb'])+'</div></div>';
+  }
+  function unitSeg(kind, units){
+    const cur = kind==='height' ? state.heightUnit : state.weightUnit;
+    return '<div class="seg" data-seg="'+kind+'">'+units.map(u=>'<button data-u="'+u+'" class="'+(u===cur?'on':'')+'">'+u+'</button>').join('')+'</div>';
+  }
+
+  // ---------- wiring ----------
+  function wireStep(step){
+    if (step.type==='multi' || step.type==='single'){
+      stage.querySelectorAll('.opt').forEach(el => el.addEventListener('click', () => {
+        const id = el.getAttribute('data-id');
+        if (step.type==='multi'){
+          const arr = state[step.key] = state[step.key] || [];
+          const i = arr.indexOf(id); if (i>=0) arr.splice(i,1); else arr.push(id);
+          // update visuals in-place without re-rendering
+          stage.querySelectorAll('.opt').forEach(o => {
+            o.classList.toggle('sel', arr.includes(o.getAttribute('data-id')));
+          });
+          updateCTA(step);
+        } else {
+          state[step.key] = id;
+          render();
+          setTimeout(() => { if (canAdvance(step)) next(); }, 220);
+        }
+      }));
+    }
+    if (step.type==='text' || step.type==='number'){
+      const inp = $('inp');
+      inp.addEventListener('input', () => {
+        state[step.key] = step.type==='number' ? (parseInt(inp.value,10)||null) : inp.value;
+        updateCTA(step);
+      });
+      inp.addEventListener('keydown', e => { if (e.key==='Enter' && canAdvance(step)) next(); });
+      setTimeout(()=>inp.focus(), 120);
+    }
+    if (step.type==='height'){
+      stage.querySelectorAll('#hcm,#hft,#hin').forEach(inp => inp.addEventListener('input', readHeight));
+      wireSeg(step);
+      readHeight();
+    }
+    if (step.type==='weight'){
+      const winp = $('winp');
+      winp.addEventListener('input', () => readWeight(step));
+      wireSeg(step);
+      readWeight(step);
+    }
+  }
+  function wireSeg(step){
+    const seg = stage.querySelector('.seg[data-seg]'); if (!seg) return;
+    const kind = seg.getAttribute('data-seg');
+    seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      const u = b.getAttribute('data-u');
+      if (kind==='height') state.heightUnit = u; else state.weightUnit = u;
+      render();
+    }));
+  }
+  function readHeight(){
+    if (state.heightUnit==='cm'){ const v = parseFloat(($('hcm')||{}).value); state.heightCm = v>0 ? Math.round(v) : null; }
+    else { const ft = parseFloat(($('hft')||{}).value)||0, inch = parseFloat(($('hin')||{}).value)||0; const cm = ft*30.48+inch*2.54; state.heightCm = cm>0 ? Math.round(cm) : null; }
+    updateCTA(activeSteps()[pos]);
+  }
+  function readWeight(step){
+    const v = parseFloat($('winp').value);
+    state[step.key] = v>0 ? (state.weightUnit==='lb' ? +(v/2.20462).toFixed(1) : v) : null;
+    updateCTA(step);
+  }
+
+  // ---------- validation / nav ----------
+  function canAdvance(step){
+    switch(step.type){
+      case 'intro': return true;
+      case 'multi': return (state[step.key]||[]).length >= (step.min!=null?step.min:1);
+      case 'single': return !!state[step.key];
+      case 'text': return (state[step.key]||'').trim().length > 0;
+      case 'number': return state[step.key] && state[step.key]>= (step.min||0) && state[step.key] <= (step.max||999);
+      case 'height': return !!state.heightCm;
+      case 'weight': return !!state[step.key];
+      default: return true;
+    }
+  }
+  function updateCTA(step){
+    if (!step || step.type==='loading' || step.type==='reveal') return;
+    cta.disabled = !canAdvance(step);
+    cta.textContent = step.type==='intro' ? 'Get started' : (step.id==='platforms'||step.id==='activity'||step.id==='goalweight'||step.id==='faith') ? 'Continue' : 'Continue';
+  }
+  function next(){ pos++; render(); window.scrollTo(0,0); }
+  function back(){ pos--; render(); window.scrollTo(0,0); }
+  function onCtaClick(){ const step = activeSteps()[pos]; if (step.type === 'intro') { window.location.href = '/login.html'; return; } if (canAdvance(step)) next(); }
+  $('backBtn').addEventListener('click', back);
+  cta.addEventListener('click', onCtaClick);
+
+  // ---------- intro ----------
+  function renderIntro(){
+    stage.innerHTML =
+      '<div class="screen"><div class="intro">' +
+        '<div class="orb"></div>' +
+        '<h1>Let’s build<br>your plan.</h1>' +
+        '<p>A few quick questions and Lifemaxx becomes yours — your goals, your numbers, your sections.</p>' +
+      '</div></div>';
+    footer.innerHTML = '<a href="/login.html"><button class="cta" type="button">Get started</button></a>';
+    cta = footer.querySelector('button');
+  }
+
+  // ---------- plan computation ----------
+  function computePlan(){
+    const kg = state.weightKg || 75, cm = state.heightCm || 175, age = state.age || 25;
+    const s = state.sex==='f' ? -161 : state.sex==='n' ? -78 : 5;
+    const bmr = 10*kg + 6.25*cm - 5*age + s;
+    const factor = (ACTIVITY.find(a=>a.id===state.activity)||{factor:1.45}).factor;
+    let tdee = bmr * factor;
+    let calorie = tdee;
+    if (state.goals.includes('lose_weight')) calorie = tdee - 500;
+    else if (state.goals.includes('build_muscle')) calorie = tdee + 300;
+    calorie = Math.max(1200, Math.round(calorie/10)*10);
+    const proteinPerKg = state.goals.includes('build_muscle') ? 2.0 : (state.goals.includes('lose_weight') ? 1.8 : 1.6);
+    const protein = Math.round(kg * proteinPerKg);
+    const waterMl = Math.round((kg * 35)/50)*50;
+    return { calorie, protein, waterMl, tdee:Math.round(tdee) };
+  }
+
+  // ---------- module derivation ----------
+  function deriveModules(){
+    const m = new Set(['main','reminders']);
+    const g = state.goals;
+    if (g.includes('lose_weight')||g.includes('build_muscle')||g.includes('eat_healthier')) { m.add('calories'); m.add('water'); }
+    if (g.includes('build_muscle')||g.includes('lose_weight')) m.add('gym');
+    if (g.includes('sleep_better')) { m.add('health'); m.add('water'); }
+    if (g.includes('eat_healthier')) m.add('water');
+    if (g.includes('track_finance')||g.includes('build_business')) m.add('finance');
+    if (g.includes('build_business')) m.add('business');
+    if (g.includes('creator')) m.add('creator');
+    if (g.includes('faith')) m.add('faith');
+    if (g.includes('discipline')) m.add('reminders');
+    if (g.includes('screentime')) { m.add('screentime'); m.add('reminders'); }
+    // sensible defaults so the dashboard never feels empty
+    m.add('calories'); m.add('water');
+    return Array.from(m);
+  }
+
+  // ---------- loading theater ----------
+  function renderLoading(){
+    const plan = computePlan();
+    const name = state.name || 'you';
+    const rows = [
+      'Analyzing your metabolism',
+      'Setting your calorie & protein targets',
+      'Calibrating your hydration goal',
+    ];
+    if (state.goals.includes('faith')) rows.push('Building your faith routine');
+    if (state.goals.includes('creator')||state.goals.includes('build_business')) rows.push('Wiring your growth dashboard');
+    rows.push('Assembling your sections');
+
+    stage.innerHTML =
+      '<div class="screen"><div class="loading">' +
+        '<div class="orb"></div>' +
+        '<h2>Building '+escapeHtml(name)+'’s plan…</h2>' +
+        '<div class="load-steps">' + rows.map((r,i)=>
+          '<div class="load-row" id="lr'+i+'"><span class="load-ic"><span class="load-spin"></span>'+CHECK+'</span><span>'+r+'</span></div>'
+        ).join('') + '</div>' +
+      '</div></div>';
+    if (window.lucide) lucide.createIcons();
+
+    let i = 0;
+    const total = rows.length;
+    function step(){
+      if (i>0) { const prev=$('lr'+(i-1)); prev.classList.remove('active'); prev.classList.add('done'); }
+      if (i>=total){ savePlan(plan); pos++; render(); return; }
+      $('lr'+i).classList.add('active');
+      i++;
+      setTimeout(step, 620 + Math.random()*260);
+    }
+    setTimeout(step, 400);
+  }
+
+  // ---------- save ----------
+  function savePlan(plan){
+    const modules = deriveModules();
+    const profile = {
+      onboarded:true, version:1, createdAt:Date.now(),
+      name:state.name, sex:state.sex, age:state.age,
+      heightCm:state.heightCm, weightKg:state.weightKg, goalWeightKg:state.goalWeightKg,
+      activity:state.activity, goals:state.goals, faith:state.faith||null, platforms:state.platforms,
+      targets:plan, modules,
+    };
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch(e){}
+    // seed the trackers the dashboard already reads
+    try {
+      localStorage.setItem('lm_name_v1', state.name||'');
+      localStorage.setItem('calorie_goal_v1', String(plan.calorie));
+      const w = JSON.parse(localStorage.getItem('po_water_v1')||'null') || { unit:'bottle', bottleMl:500, glassMl:250, logs:{} };
+      w.profile = Object.assign(w.profile||{}, { weightKg:state.weightKg, heightCm:state.heightCm, age:state.age, sex:state.sex });
+      localStorage.setItem('po_water_v1', JSON.stringify(w));
+    } catch(e){}
+  }
+
+  // ---------- reveal ----------
+  const MODULE_META = {
+    main:{label:'Daily plan',icon:'compass'}, calories:{label:'Calories',icon:'flame'}, water:{label:'Water',icon:'waves'},
+    gym:{label:'Fitness',icon:'dumbbell'}, health:{label:'Health',icon:'heart-pulse'}, finance:{label:'Finance',icon:'trending-up'},
+    business:{label:'Business',icon:'rocket'}, creator:{label:'Creator',icon:'clapperboard'}, faith:{label:'Faith',icon:'heart'},
+    reminders:{label:'Reminders',icon:'bell'},
+  };
+  function projectionHTML(){
+    const cur = state.weightKg, goal = state.goalWeightKg;
+    if (!cur || !goal || Math.abs(cur-goal) < 0.5) return '';
+    const losing = goal < cur;
+    const rate = (!losing && state.goals.includes('build_muscle')) ? 0.25 : 0.45; // kg/week
+    const weeks = Math.abs(cur-goal)/rate;
+    const d = new Date(Date.now() + weeks*7*86400000);
+    const dateStr = d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    const goalLabel = state.weightUnit==='lb' ? Math.round(goal*2.20462)+' lb' : Math.round(goal)+' kg';
+    return '<p class="reveal-proj">On track for <b>'+goalLabel+'</b> by <b>'+dateStr+'</b></p>';
+  }
+  function renderReveal(){
+    const plan = computePlan();
+    const modules = deriveModules();
+    const name = state.name ? escapeHtml(state.name) : 'you';
+    stage.innerHTML =
+      '<div class="screen"><div class="reveal">' +
+        '<div class="reveal-badge">Your plan is ready</div>' +
+        '<h2>Here’s your plan,<br><span class="reveal-name">'+name+'</span>.</h2>' +
+        projectionHTML() +
+        '<div class="target-grid">' +
+          target(plan.calorie,'kcal','Daily calories') +
+          target(plan.protein,'grams','Protein') +
+          target((plan.waterMl/1000).toFixed(1).replace(/\.0$/,''),'litres','Water') +
+        '</div>' +
+        '<div class="sections-head">Your dashboard · '+modules.length+' sections</div>' +
+        '<div class="chips">' + modules.map(id => {
+          const meta = MODULE_META[id] || {label:id,icon:'circle'};
+          return '<span class="chip"><i data-lucide="'+meta.icon+'"></i>'+meta.label+'</span>';
+        }).join('') + '</div>' +
+        '<div class="footer" style="margin-top:auto;padding-top:28px"><button class="cta" id="finish">Enter Lifemaxx</button></div>' +
+      '</div></div>';
+    if (window.lucide) lucide.createIcons();
+    $('finish').addEventListener('click', () => { window.location.href = 'index.html'; });
+  }
+  function target(v,u,l){ return '<div class="target"><div class="v">'+v+'</div><div class="u">'+u+'</div><div class="l">'+l+'</div></div>'; }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ---------- go ----------
+  render();
+})();
+</script>
+</body>
+</html>
