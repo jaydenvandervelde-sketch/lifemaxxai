@@ -933,7 +933,7 @@ window.addEventListener('storage', e => {
   if (e.key === HEALTH_KEY || e.key === LEGACY_WHOOP_KEY || e.key === null) { health = loadHealth(); render(); }
 });
 
-if (!profile && !onboardSeen()) { ui.profileDraft = draftFromProfile(); ui.profileOpen = true; }
+if (!profile && !onboardSeen()) { window.location.href = 'login.html'; }
 applyTheme(currentTheme);
 
 (function bootVitals(){
