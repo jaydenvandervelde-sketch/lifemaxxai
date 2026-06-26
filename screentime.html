@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0C0C12" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Patron" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<title>Screen Time · Rowan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("patron_theme")||"nocturne");}catch(e){document.documentElement.setAttribute("data-theme","nocturne");}</script>
+<link rel="stylesheet" href="theme.css" />
+<style>
+/* ---- Page-specific layout ---- */
+.stGrid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: var(--space-4); }
+@media (max-width: 900px) { .stGrid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 520px)  { .stGrid { grid-template-columns: 1fr; } }
+.stWide { grid-column: span 2; }
+@media (max-width: 520px) { .stWide { grid-column: span 1; } }
+
+/* ---- Hero tile: ring + summary ---- */
+.heroCard {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid var(--brand-line);
+  border-radius: var(--radius-lg);
+  background: var(--brand-soft);
+  box-shadow: 0 0 50px -24px var(--brand-glow), var(--card-shadow);
+}
+@media (max-width: 520px) { .heroCard { grid-column: span 1; } }
+.heroHead { display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); flex-wrap:wrap; }
+.heroEyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand); }
+.heroBody { display:flex; align-items:center; gap: var(--space-6); flex-wrap: wrap; }
+.heroMetrics { display:flex; flex-direction:column; gap: var(--space-3); flex:1; min-width: 150px; }
+.heroRow { display:flex; align-items:baseline; justify-content:space-between; gap: var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--border); }
+.heroRow:last-child { border-bottom:0; }
+.heroLabel { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.heroVal { font-family: var(--font-display); font-weight: 600; font-size: var(--text-lg); font-variant-numeric: tabular-nums; }
+.heroVal em { font-family: var(--font-mono); font-style: normal; font-size: 11px; color: var(--muted); margin-left: 4px; }
+.heroFoot { display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); flex-wrap:wrap; }
+.heroNote { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+/* ---- Ring ---- */
+.stRing { position: relative; width: 132px; height: 132px; display:grid; place-items:center; flex-shrink:0; }
+.stRing svg { position:absolute; inset:0; transform: rotate(-90deg); }
+.stTrack { fill:none; stroke: var(--track); stroke-width: 9; }
+.stFill  { fill:none; stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 700ms var(--ease-premium); }
+.stFill[data-tone="good"]  { stroke: var(--pos);  filter: drop-shadow(0 0 10px var(--pos)); }
+.stFill[data-tone="watch"] { stroke: var(--warn); filter: drop-shadow(0 0 10px var(--warn)); }
+.stFill[data-tone="over"]  { stroke: var(--neg);  filter: drop-shadow(0 0 10px var(--neg)); }
+.stFill[data-tone="muted"] { stroke: var(--muted); }
+.stRingNum { font-family: var(--font-display); font-weight: 600; font-size: 2rem; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; text-align:center; }
+.stRingUnit { font-size: 11px; color: var(--muted-strong); }
+.stRingCap { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+
+/* ---- Status badge ---- */
+.statusBadge { display:inline-flex; align-items:center; gap: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--border); }
+.statusBadge[data-tone="good"]  { border-color: var(--pos-line);  background: var(--pos-soft);  color: var(--pos); }
+.statusBadge[data-tone="watch"] { border-color: var(--warn-line); background: var(--warn-soft); color: var(--warn); }
+.statusBadge[data-tone="over"]  { border-color: var(--neg-line);  background: var(--neg-soft);  color: var(--neg); }
+.statusBadge[data-tone="muted"] { color: var(--muted); }
+.statusDot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ---- Category breakdown ---- */
+.catRow { display:flex; align-items:center; gap: var(--space-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.catRow:last-child { border-bottom:0; }
+.catEmoji { font-size: 18px; width: 28px; text-align:center; flex-shrink:0; }
+.catLabel { font-size: var(--text-sm); font-weight: 600; flex:1; }
+.catSub   { font-size: 11px; color: var(--muted); }
+.catBar   { width: 80px; height: 5px; background: var(--track); border-radius: var(--radius-pill); overflow:hidden; flex-shrink:0; }
+.catBarFill { height: 100%; border-radius: var(--radius-pill); transition: width 600ms var(--ease-premium); }
+.catBarFill[data-cat="social"]      { background: var(--neg); }
+.catBarFill[data-cat="productive"]  { background: var(--pos); }
+.catBarFill[data-cat="entertainment"] { background: var(--warn); }
+.catBarFill[data-cat="other"]       { background: var(--brand); }
+.catTime { font-family: var(--font-mono); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 46px; text-align:right; }
+
+/* ---- History list ---- */
+.histRow { display:flex; align-items:center; gap: var(--space-3); padding: 9px 0; border-bottom: 1px solid var(--border); }
+.histRow:last-child { border-bottom:0; }
+.histDate { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--muted); min-width: 70px; }
+.histBar  { flex:1; height: 5px; background: var(--track); border-radius: var(--radius-pill); overflow:hidden; }
+.histBarFill { height: 100%; border-radius: var(--radius-pill); transition: width 500ms var(--ease-premium); }
+.histVal { font-family: var(--font-mono); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 46px; text-align:right; }
+.histVal[data-tone="good"]  { color: var(--pos); }
+.histVal[data-tone="watch"] { color: var(--warn); }
+.histVal[data-tone="over"]  { color: var(--neg); }
+
+/* ---- Inline category add form ---- */
+.catForm { display:grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-2); align-items:end; }
+@media (max-width: 480px) { .catForm { grid-template-columns: 1fr; } }
+.catFormSelect { width:100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px; color: var(--fg); font-family: var(--font-mono); font-size: 14px; outline: none; appearance:none; transition: border-color var(--duration) var(--ease-premium); }
+.catFormSelect:focus { border-color: var(--brand-line); box-shadow: 0 0 0 3px var(--brand-soft); }
+
+/* ---- Compact stat cards ---- */
+.stStat { display:flex; flex-direction:column; justify-content:space-between; min-height: 120px; }
+.stStatNum { font-family: var(--font-display); font-weight: 600; font-size: var(--text-2xl); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; margin-top: auto; }
+.stStatNum[data-tone="good"]  { color: var(--pos); }
+.stStatNum[data-tone="warn"]  { color: var(--warn); }
+.stStatNum[data-tone="neg"]   { color: var(--neg); }
+</style>
+</head>
+<body>
+<main class="page grain-overlay">
+  <div class="shell">
+
+    <header class="header">
+      <div>
+        <h1 class="title">Screen Time</h1>
+        <p class="subtitle">Digital habits · daily usage</p>
+      </div>
+      <div class="headerControls">
+        <a class="backLink" href="index.html">← Dashboard</a>
+        <span id="themeSeg"></span>
+      </div>
+    </header>
+
+    <div class="stGrid" id="grid">
+      <!-- Rendered by JS -->
+    </div>
+
+  </div>
+</main>
+
+<div id="modalRoot"></div>
+
+<script src="theme.js"></script>
+<script>
+document.getElementById('themeSeg').innerHTML = Patron.switcherHtml();
+
+/* ============================================================
+ * Storage
+ * ============================================================ */
+const STORAGE_KEY = 'screentime_standalone_v1';
+const CATS = [
+  { id: 'social',        label: 'Social',        emoji: '📱', color: 'neg' },
+  { id: 'productive',    label: 'Productive',     emoji: '💼', color: 'pos' },
+  { id: 'entertainment', label: 'Entertainment',  emoji: '🎬', color: 'warn' },
+  { id: 'other',         label: 'Other',          emoji: '🔲', color: 'brand' },
+];
+
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function dateLabel(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return names[dt.getDay()] + ' ' + months[m-1] + ' ' + d;
+}
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { logs: {}, limit: 120, goal: 90 }; } catch(e) { return { logs: {}, limit: 120, goal: 90 }; }
+}
+function save(data) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {} }
+
+function fmt(mins) {
+  if (mins == null || mins === 0) return '0m';
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h > 0 ? (h + 'h ' + (m > 0 ? m + 'm' : '')) : m + 'm';
+}
+function tone(mins, limit) {
+  if (!limit || mins == null) return 'muted';
+  if (mins > limit)               return 'over';
+  if (mins > limit * 0.75)        return 'watch';
+  return 'good';
+}
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ============================================================
+ * Render
+ * ============================================================ */
+function render() {
+  const data = load();
+  const today = todayKey();
+  const todayLog = data.logs[today] || {};
+  const todayMins = CATS.reduce((s, c) => s + (todayLog[c.id] || 0), 0);
+  const limit = data.limit || 120;
+  const goal  = data.goal  || 90;
+
+  const t = tone(todayMins, limit);
+  const circ = 2 * Math.PI * 56;
+  const pct = Math.min(1, todayMins / limit);
+  const ringOffset = circ * (1 - pct);
+
+  // Hero card
+  const badgeLabels = { good: 'Under limit', watch: 'Approaching limit', over: 'Over limit', muted: 'No data' };
+
+  const heroCard = `
+    <div class="heroCard">
+      <div class="heroHead">
+        <span class="heroEyebrow">Today's screen time</span>
+        <span class="statusBadge" data-tone="${t}"><span class="statusDot"></span>${badgeLabels[t]}</span>
+      </div>
+      <div class="heroBody">
+        <div class="stRing">
+          <svg viewBox="0 0 132 132" aria-hidden>
+            <circle cx="66" cy="66" r="56" class="stTrack"/>
+            <circle cx="66" cy="66" r="56" class="stFill" data-tone="${t}"
+              style="stroke-dasharray:${circ};stroke-dashoffset:${ringOffset};"/>
+          </svg>
+          <div style="text-align:center">
+            <div class="stRingNum">${fmt(todayMins)}</div>
+            <div class="stRingCap">of ${fmt(limit)} limit</div>
+          </div>
+        </div>
+        <div class="heroMetrics">
+          <div class="heroRow"><span class="heroLabel">Daily limit</span><span class="heroVal">${fmt(limit)}</span></div>
+          <div class="heroRow"><span class="heroLabel">Goal</span><span class="heroVal">${fmt(goal)}</span></div>
+          <div class="heroRow"><span class="heroLabel">Remaining</span><span class="heroVal" style="color:${todayMins > limit ? 'var(--neg)' : 'var(--pos)'}">${todayMins > limit ? '+' + fmt(todayMins - limit) + ' over' : fmt(limit - todayMins)}</span></div>
+          <div class="heroRow"><span class="heroLabel">vs goal</span><span class="heroVal" style="color:${todayMins > goal ? 'var(--warn)' : 'var(--pos)'}">${todayMins > goal ? '+' + fmt(todayMins - goal) + ' over' : fmt(goal - todayMins) + ' under'}</span></div>
+        </div>
+      </div>
+      <div class="heroFoot">
+        <span class="heroNote">Updated ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+        <button class="btn btn-ghost" onclick="openSettings()">⚙ Settings</button>
+      </div>
+    </div>`;
+
+  // Stat mini-cards
+  const last7 = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const log = data.logs[k] || {};
+    const m = CATS.reduce((s, c) => s + (log[c.id] || 0), 0);
+    last7.push(m);
+  }
+  const weekTotal = last7.reduce((a,b) => a+b, 0);
+  const weekAvg   = Math.round(weekTotal / 7);
+  const best      = Math.min(...last7.filter(v => v > 0));
+  const worst     = Math.max(...last7);
+
+  const avgTone = tone(weekAvg, limit);
+  const avgColor = avgTone === 'good' ? 'good' : avgTone === 'over' ? 'neg' : 'warn';
+
+  const statCards = [
+    { label: 'Weekly avg', value: fmt(weekAvg), tone: avgColor, sub: 'per day' },
+    { label: 'Week total', value: fmt(weekTotal), tone: 'brand', sub: '7 days' },
+    { label: 'Best day', value: best === Infinity ? '—' : fmt(best), tone: 'good', sub: 'lowest' },
+    { label: 'Worst day', value: worst === 0 ? '—' : fmt(worst), tone: worst > limit ? 'neg' : 'warn', sub: 'highest' },
+  ].map(s => `
+    <div class="card stStat">
+      <div>
+        <span class="cardName" style="font-size:var(--text-base)">${s.label}</span>
+        <p class="cardTag">${s.sub}</p>
+      </div>
+      <span class="stStatNum" data-tone="${s.tone}">${s.value}</span>
+    </div>`).join('');
+
+  // Category breakdown
+  const catMax = Math.max(1, ...CATS.map(c => todayLog[c.id] || 0));
+  const catRows = CATS.map(c => {
+    const m = todayLog[c.id] || 0;
+    const pct = Math.round((m / catMax) * 100);
+    return `<div class="catRow">
+      <span class="catEmoji">${c.emoji}</span>
+      <div style="flex:1;min-width:0">
+        <div class="catLabel">${c.label}</div>
+      </div>
+      <div class="catBar"><div class="catBarFill" data-cat="${c.id}" style="width:${pct}%"></div></div>
+      <span class="catTime">${fmt(m)}</span>
+    </div>`;
+  }).join('');
+
+  const breakdownCard = `
+    <div class="card stWide">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap">
+        <span class="cardName">By category</span>
+        <button class="btn btn-primary" style="font-size:12px;padding:6px 14px" onclick="openLog()">+ Log time</button>
+      </div>
+      <div>${catRows}</div>
+    </div>`;
+
+  // 7-day history
+  const histMax = Math.max(1, ...last7);
+  const histRows = last7.map((m, i) => {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const pct = Math.round((m / histMax) * 100);
+    const t = tone(m, limit);
+    const fillColor = t === 'good' ? 'var(--pos)' : t === 'over' ? 'var(--neg)' : 'var(--warn)';
+    return `<div class="histRow">
+      <span class="histDate">${i === 0 ? 'Today' : dateLabel(k)}</span>
+      <div class="histBar"><div class="histBarFill" style="width:${pct}%;background:${fillColor}"></div></div>
+      <span class="histVal" data-tone="${t}">${m > 0 ? fmt(m) : '—'}</span>
+    </div>`;
+  }).join('');
+
+  const histCard = `
+    <div class="card stWide">
+      <span class="cardName">Last 7 days</span>
+      <div>${histRows}</div>
+    </div>`;
+
+  // Tips card
+  const tips = [
+    { icon: '🌅', tip: 'Avoid screens for the first 30 minutes after waking.' },
+    { icon: '🍽️', tip: 'Keep meals phone-free — eat without distraction.' },
+    { icon: '🌙', tip: 'Set a screen-off alarm 1 hour before bed.' },
+    { icon: '📵', tip: 'Use Do Not Disturb during deep work blocks.' },
+  ];
+  const tipIdx = new Date().getDate() % tips.length;
+  const tip = tips[tipIdx];
+  const tipsCard = `
+    <div class="card">
+      <span class="cardName">Daily tip</span>
+      <p class="cardTag" style="font-size:13px;line-height:1.6;color:var(--muted-strong)">${tip.icon} ${tip.tip}</p>
+    </div>`;
+
+  // Streak card
+  let streak = 0;
+  for (let i = 1; i <= 30; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const log = data.logs[k] || {};
+    const m = CATS.reduce((s, c) => s + (log[c.id] || 0), 0);
+    if (m > 0 && m <= limit) streak++;
+    else break;
+  }
+  const streakCard = `
+    <div class="card stStat">
+      <div>
+        <span class="cardName" style="font-size:var(--text-base)">Under-limit streak</span>
+        <p class="cardTag">consecutive days</p>
+      </div>
+      <span class="stStatNum" data-tone="${streak >= 7 ? 'good' : streak >= 3 ? 'warn' : 'neg'}">${streak > 0 ? streak + ' 🔥' : '0'}</span>
+    </div>`;
+
+  document.getElementById('grid').innerHTML =
+    heroCard + statCards + breakdownCard + histCard + tipsCard + streakCard;
+}
+
+/* ============================================================
+ * Log time modal
+ * ============================================================ */
+function openLog() {
+  const data = load();
+  const today = todayKey();
+  const log = data.logs[today] || {};
+
+  const rows = CATS.map(c => `
+    <div class="field">
+      <label class="fieldLabel">${c.emoji} ${c.label} (minutes)</label>
+      <input id="st-cat-${c.id}" class="fieldInput" type="number" min="0" max="1440" inputmode="numeric" placeholder="0" value="${log[c.id] || ''}" />
+    </div>`).join('');
+
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="overlay" id="stOverlay">
+      <div class="panel" style="max-width:420px" onclick="event.stopPropagation()">
+        <div class="panelHead">
+          <div>
+            <div class="panelEyebrow">Log</div>
+            <h2 class="panelTitle">Today's screen time</h2>
+          </div>
+          <button class="panelClose" onclick="closeModal()">×</button>
+        </div>
+        <div class="fieldGrid">${rows}</div>
+        <div class="panelActions">
+          <button class="btn btn-link spacer" onclick="clearToday()">Clear today</button>
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveLog()">Save</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('stOverlay').addEventListener('click', closeModal);
+}
+
+function saveLog() {
+  const data = load();
+  const today = todayKey();
+  if (!data.logs[today]) data.logs[today] = {};
+  CATS.forEach(c => {
+    const el = document.getElementById('st-cat-' + c.id);
+    if (!el) return;
+    const v = parseInt(el.value, 10);
+    data.logs[today][c.id] = isNaN(v) || v < 0 ? 0 : Math.min(v, 1440);
+  });
+  save(data);
+  closeModal();
+  render();
+}
+
+function clearToday() {
+  if (!confirm('Clear all screen time for today?')) return;
+  const data = load();
+  delete data.logs[todayKey()];
+  save(data);
+  closeModal();
+  render();
+}
+
+/* ============================================================
+ * Settings modal
+ * ============================================================ */
+function openSettings() {
+  const data = load();
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="overlay" id="stOverlay">
+      <div class="panel" style="max-width:400px" onclick="event.stopPropagation()">
+        <div class="panelHead">
+          <div>
+            <div class="panelEyebrow">Preferences</div>
+            <h2 class="panelTitle">Settings</h2>
+          </div>
+          <button class="panelClose" onclick="closeModal()">×</button>
+        </div>
+        <div class="fieldGrid">
+          <div class="field fieldFull">
+            <label class="fieldLabel">Daily limit (minutes)</label>
+            <input id="st-limit" class="fieldInput" type="number" min="1" max="1440" inputmode="numeric" placeholder="120" value="${data.limit || 120}" />
+          </div>
+          <div class="field fieldFull">
+            <label class="fieldLabel">Daily goal (minutes)</label>
+            <input id="st-goal" class="fieldInput" type="number" min="1" max="1440" inputmode="numeric" placeholder="90" value="${data.goal || 90}" />
+          </div>
+        </div>
+        <p class="panelNote">The <strong>limit</strong> is your hard cap — the ring turns red when you exceed it. The <strong>goal</strong> is your personal target — the ring turns amber when you're over it but under the limit.</p>
+        <div class="panelActions">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('stOverlay').addEventListener('click', closeModal);
+}
+
+function saveSettings() {
+  const data = load();
+  const limit = parseInt(document.getElementById('st-limit').value, 10);
+  const goal  = parseInt(document.getElementById('st-goal').value, 10);
+  if (!isNaN(limit) && limit > 0) data.limit = limit;
+  if (!isNaN(goal)  && goal  > 0) data.goal  = goal;
+  save(data);
+  closeModal();
+  render();
+}
+
+function closeModal() {
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+// Sync theme changes from sibling tabs
+window.addEventListener('storage', e => {
+  if (e.key === 'patron_theme' && e.newValue) {
+    document.documentElement.setAttribute('data-theme', e.newValue);
+    document.getElementById('themeSeg').innerHTML = Patron.switcherHtml();
+  }
+});
+
+render();
+</script>
+</body>
+</html>

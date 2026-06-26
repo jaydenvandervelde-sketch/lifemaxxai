@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0F0F23" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Sign In · LifeMaxx AI</title>
+<link rel="icon" type="image/svg+xml" href="lifemaxxai/icon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Exo+2:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  color-scheme: dark;
+  --bg:          #0F0F23;
+  --bg-el:       #1A1A3A;
+  --surface:     rgba(139,92,246,0.06);
+  --surface-2:   rgba(139,92,246,0.11);
+  --fg:          #F8FAFC;
+  --muted:       rgba(226,232,255,0.52);
+  --muted-s:     rgba(226,232,255,0.80);
+  --border:      rgba(124,58,237,0.22);
+  --border-s:    rgba(167,139,250,0.45);
+  --brand:       #8B5CF6;
+  --brand-2:     #22D3EE;
+  --brand-ink:   #0B0420;
+  --brand-soft:  rgba(139,92,246,0.16);
+  --brand-line:  rgba(139,92,246,0.40);
+  --brand-glow:  rgba(139,92,246,0.65);
+  --neg:         #F472B6;
+  --g1:          rgba(139,92,246,0.22);
+  --g2:          rgba(34,211,238,0.12);
+  --ep:          cubic-bezier(0.16,1,0.3,1);
+  --e:           cubic-bezier(0.2,0.8,0.2,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Exo 2', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 1.5rem;
+}
+
+/* ambient glow background — same radials as dashboard */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(58% 52% at 80% 8%,  var(--g1), transparent 70%),
+    radial-gradient(48% 44% at 14% 90%, var(--g2), transparent 72%);
+}
+
+/* grain overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 200px 200px;
+}
+
+/* ---- layout ---- */
+.wrap {
+  position: relative;
+  z-index: 2;
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+/* ---- logo ---- */
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 32px var(--brand-glow), 0 0 64px rgba(34,211,238,0.15);
+}
+
+.logo-icon svg {
+  width: 26px;
+  height: 26px;
+  fill: var(--brand-ink);
+}
+
+.logo-wordmark {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, #fff 30%, var(--brand-2) 68%, var(--brand));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 18px rgba(34,211,238,0.35));
+}
+
+/* ---- card ---- */
+.card {
+  width: 100%;
+  background: var(--bg-el);
+  border: 1px solid var(--border-s);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow:
+    0 1px 0 rgba(167,139,250,0.08) inset,
+    0 32px 80px -20px rgba(0,0,0,0.85),
+    0 0 0 1px rgba(139,92,246,0.08);
+  animation: rise 400ms var(--ep) both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+.card-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: 0.4rem;
+}
+
+.card-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 1.375rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, #fff 40%, var(--brand-2) 80%, var(--brand));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 1.75rem;
+  line-height: 1.2;
+}
+
+/* ---- fields ---- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+
+.field:last-of-type {
+  margin-bottom: 0;
+}
+
+.field-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field-row {
+  position: relative;
+}
+
+.field-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 11px 14px;
+  color: var(--fg);
+  font-family: 'Exo 2', sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 200ms var(--ep), box-shadow 200ms var(--ep), background 200ms var(--ep);
+}
+
+.field-input::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.field-input:focus {
+  border-color: var(--brand-line);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.field-input.has-toggle {
+  padding-right: 44px;
+}
+
+.toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 150ms var(--e);
+}
+
+.toggle-btn:hover {
+  color: var(--muted-s);
+}
+
+.field-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.forgot-link {
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 150ms var(--e);
+}
+
+.forgot-link:hover {
+  color: var(--brand-2);
+}
+
+/* ---- form actions ---- */
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  border-radius: 11px;
+  font-size: 0.9375rem;
+  font-family: 'Exo 2', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: all 200ms var(--ep);
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand), #6d28d9);
+  color: var(--fg);
+  border-color: var(--brand-line);
+  text-transform: uppercase;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8125rem;
+  letter-spacing: 0.1em;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+  opacity: 0;
+  transition: opacity 200ms var(--ep);
+}
+
+.btn-primary:hover::before {
+  opacity: 1;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 32px var(--brand-glow), 0 0 60px rgba(139,92,246,0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-google {
+  background: var(--surface);
+  color: var(--muted-s);
+  border-color: var(--border-s);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.btn-google:hover {
+  background: var(--surface-2);
+  border-color: rgba(167,139,250,0.6);
+  color: var(--fg);
+  box-shadow: 0 0 18px rgba(139,92,246,0.15);
+}
+
+/* ---- divider ---- */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0.25rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ---- sign-up footer ---- */
+.signup-footer {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.signup-footer a {
+  color: var(--brand-2);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 150ms var(--e), text-shadow 150ms var(--e);
+}
+
+.signup-footer a:hover {
+  color: #fff;
+  text-shadow: 0 0 12px rgba(34,211,238,0.6);
+}
+
+/* ---- error message ---- */
+.error-msg {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(244,114,182,0.1);
+  border: 1px solid rgba(244,114,182,0.28);
+  color: var(--neg);
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 0.75rem;
+}
+
+.error-msg.visible {
+  display: flex;
+}
+
+/* ---- mobile ---- */
+@media (max-width: 480px) {
+  input { font-size: 16px !important; }
+  .card { padding: 1.5rem; }
+}
+
+@supports (padding: max(0px)) {
+  body {
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- Logo -->
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </div>
+    <span class="logo-wordmark">LifeMaxx AI</span>
+  </div>
+
+  <!-- Sign-in card -->
+  <div class="card">
+    <div class="card-eyebrow">Welcome back</div>
+    <h1 class="card-title">Sign In</h1>
+
+    <form id="loginForm" novalidate>
+
+      <div class="field">
+        <label class="field-label" for="email">Email</label>
+        <div class="field-row">
+          <input
+            class="field-input"
+            type="email"
+            id="email"
+            name="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="password">Password</label>
+        <div class="field-row">
+          <input
+            class="field-input has-toggle"
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            placeholder="••••••••••••"
+            required
+          />
+          <button type="button" class="toggle-btn" id="togglePwd" aria-label="Show password">
+            <svg id="eyeOn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg id="eyeOff" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </button>
+        </div>
+        <div class="field-footer">
+          <a class="forgot-link" href="/forgot-password.html">Forgot password?</a>
+        </div>
+      </div>
+
+      <div class="error-msg" id="errorMsg" role="alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errorText">Invalid email or password.</span>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="signInBtn">
+          Sign In
+        </button>
+
+        <div class="divider">or</div>
+
+        <button type="button" class="btn btn-google" id="googleBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+  <p class="signup-footer">
+    Don't have an account? <a href="/signup.html">Create one</a>
+  </p>
+
+</div>
+
+<script>
+  // Password visibility toggle
+  const pwdInput  = document.getElementById('password');
+  const toggleBtn = document.getElementById('togglePwd');
+  const eyeOn     = document.getElementById('eyeOn');
+  const eyeOff    = document.getElementById('eyeOff');
+
+  toggleBtn.addEventListener('click', () => {
+    const show = pwdInput.type === 'password';
+    pwdInput.type       = show ? 'text' : 'password';
+    eyeOn.style.display  = show ? 'none'  : '';
+    eyeOff.style.display = show ? ''      : 'none';
+    toggleBtn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
+
+  // Show error helper
+  function showError(msg) {
+    const box  = document.getElementById('errorMsg');
+    const text = document.getElementById('errorText');
+    text.textContent = msg;
+    box.classList.add('visible');
+  }
+
+  function clearError() {
+    document.getElementById('errorMsg').classList.remove('visible');
+  }
+
+  // ---- Email / Password sign-in ----
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn      = document.getElementById('signInBtn');
+
+    if (!email || !password) {
+      showError('Please enter your email and password.');
+      return;
+    }
+
+    btn.textContent = 'Signing in…';
+    btn.disabled    = true;
+
+    try {
+      // ── Supabase example ──────────────────────────────────────────────────
+      // const { createClient } = supabase;
+      // const sb = createClient(YOUR_SUPABASE_URL, YOUR_SUPABASE_ANON_KEY);
+      // const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      // if (error) throw error;
+      // window.location.href = '/onboarding.html';
+      // ─────────────────────────────────────────────────────────────────────
+
+      // Placeholder: replace with your real auth call
+      throw new Error('Auth not wired up yet — see the JS comments in login.html.');
+    } catch (err) {
+      showError(err.message || 'Sign in failed. Please try again.');
+    } finally {
+      btn.textContent = 'Sign In';
+      btn.disabled    = false;
+    }
+  });
+
+  // ---- Google OAuth ----
+  document.getElementById('googleBtn').addEventListener('click', async () => {
+    clearError();
+
+    try {
+      // ── Supabase example ──────────────────────────────────────────────────
+      // const { createClient } = supabase;
+      // const sb = createClient(YOUR_SUPABASE_URL, YOUR_SUPABASE_ANON_KEY);
+      // const { error } = await sb.auth.signInWithOAuth({
+      //   provider: 'google',
+      //   options: { redirectTo: window.location.origin + '/onboarding.html' },
+      // });
+      // if (error) throw error;
+      // ─────────────────────────────────────────────────────────────────────
+
+      throw new Error('Google auth not wired up yet — see the JS comments in login.html.');
+    } catch (err) {
+      showError(err.message || 'Google sign-in failed. Please try again.');
+    }
+  });
+</script>
+
+</body>
+</html>
