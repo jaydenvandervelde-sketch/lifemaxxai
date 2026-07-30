@@ -102,9 +102,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
       </svg>
       Continue with Google
     </button>
-<button onclick="connectWhoop()" class=class="btn-google"p: 12px; background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.15);">
-    <span style="font-weight: 600;">Connect WHOOP</span>
-</button>
+
     <div class="divider">or</div>
 
     <div class="field">
@@ -303,43 +301,25 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
         window.location.href = 'https://lifemaxxai.vercel.app/';
       }
     });
-<script>
-(function () {
-    let handled = false; // Prevents double submission errors
 
-    async function checkSession() {
-        const { data } = await sb.auth.getSession();
-        if (data && data.session && data.session.user) {
-            if (handled) return;
-            handled = true;
-            showOverlay('Signed in! Saving your plan...');
-            await handlePostAuth(data.session.user);
-            window.location.href = 'https://vercel.app';
-        }
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.user) {
+      if (handled) return;
+      handled = true;
+      showOverlay('Signed in! Saving your plan…');
+      await handlePostAuth(data.session.user);
+      window.location.href = 'https://lifemaxxai.vercel.app/';
     }
+  }
 
-    async function connectWhoop() {
-        const { data, error } = await sb.auth.signInWithOAuth({
-            provider: 'custom:whoop',
-            options: {
-                redirectTo: 'https://vercel.app'
-            }
-        });
-        
-        if (error) {
-            console.error('Connection Error:', error.message);
-        }
-    }
-
-    // Safely expose your button function to the window scope
-    window.connectWhoop = connectWhoop;
-
-    // ----- boot -----
-    InitSupabase().then(checkSession);
+  // ----- boot -----
+ initSupabase().then(checkSession);
 })();
 </script>
 
 <script>
-const SUPABASE_URL = "https://supabase.co";
-const SUPABASE_ANON_KEY = "eyJhYmdjOi...[REST OF YOUR ACTIVE KEY]";
+const SUPABASE_URL = "https://ujcziqvevghdqchfnvxm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqY3ppcXZldmdoZHFjaGZudnhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyODc1NjMsImV4cCI6MjA5Nzg2MzU2M30.tK9ainyA5Zks7EsBlgtOXcrZH2ip66wybECEqFN_yMk";
 </script>
+</body>
+</html>
