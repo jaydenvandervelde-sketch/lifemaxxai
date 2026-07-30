@@ -851,7 +851,9 @@ function profileModalHtml(){
     + (isEdit ? '<button type="button" class="panelClose" data-action="close-profile">×</button>' : '') + '</div>'
     + (isEdit ? '' : '<p class="panelNote" style="border-color:var(--brand-line)">Tell the suite a little about you — your name personalizes it, and your stats pre-fill the apps (weight → Water, age/goal/training → Supplements). Stored only in this browser; edit anytime.</p>')
     + body
-    + '<div class="panelActions"><button type="button" class="btn ' + (isEdit ? 'btn-ghost' : 'btn-link') + '" data-action="close-profile">' + (isEdit ? 'Cancel' : 'Skip for now') + '</button>'
+    + '<div class="panelActions">'
+    + (isEdit ? '<button type="button" class="btn btn-link" data-action="logout" style="margin-right:auto;color:#e5484d">Log out</button>' : '')
+    + '<button type="button" class="btn ' + (isEdit ? 'btn-ghost' : 'btn-link') + '" data-action="close-profile">' + (isEdit ? 'Cancel' : 'Skip for now') + '</button>'
     + '<button type="button" class="btn btn-primary" data-action="save-profile">' + (isEdit ? 'Save' : 'Save &amp; start') + '</button></div></div></div>';
 }
 function saveProfile(){
@@ -882,6 +884,7 @@ document.addEventListener('click', e => {
   if (action === 'theme') { applyTheme(btn.getAttribute('data-theme')); return; }
   if (action === 'open-vitals') { openVitals(); return; }
   if (action === 'open-profile') { openProfile(); return; }
+  if (action === 'logout') { doLogout(); return; }
   if (action === 'close-profile') { if (!stop || btn.tagName === 'BUTTON') { ui.profileOpen = false; markOnboardSeen(); renderModal(); } return; }
   if (action === 'save-profile') { saveProfile(); return; }
   if (action === 'close-vitals') { if (!stop || btn.tagName === 'BUTTON') { ui.modalOpen = false; renderModal(); } return; }
@@ -907,6 +910,21 @@ document.addEventListener('click', e => {
     return;
   }
 });
+
+async function doLogout(){
+  try {
+    let url = (localStorage.getItem('po_supabase_url') || '').trim();
+    let key = (localStorage.getItem('po_supabase_key') || '').trim();
+    if (!url || !key) {
+      try { const r = await fetch('/api/config', { cache: 'no-store' }); if (r.ok) { const cfg = await r.json(); url = (cfg.url || '').trim(); key = (cfg.key || '').trim(); } } catch(_) {}
+    }
+    if (url && key && window.supabase) {
+      const client = window.supabase.createClient(url, key);
+      await client.auth.signOut();
+    }
+  } catch(_) {}
+  window.location.href = 'login.html';
+}
 
 document.addEventListener('input', e => {
   const t = e.target; if (!(t && t.dataset && t.dataset.pf)) return;

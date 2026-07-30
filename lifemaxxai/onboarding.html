@@ -215,14 +215,15 @@ form{display:flex;flex-direction:column;gap:14px;flex:1;animation:fadeUp .42s .0
     if (!weightKg || weightKg < 20 || weightKg > 350)  return showErr('Please enter a valid weight.');
     if (isNaN(activeHours) || activeHours < 0 || activeHours > 60) return showErr('Please enter active hours (0–60).');
 
-    try {
-      localStorage.setItem('pendingOnboardingData', JSON.stringify({
-        name, age, sex, heightCm, weightKg, activeHoursPerWeek: activeHours
-      }));
-    } catch (_) {}
-
-    window.location.href = 'login.html';
-  });
+         try {
+        localStorage.setItem('pendingOnboardingData', JSON.stringify({
+            name, age, sex, heightCm, weightKg, activeHoursPerWeek: activeHours
+        }));
+        window.location.href = 'login.html';
+    } catch (e) {
+        showErr('Failed to temporarily save your data. Please check your browser settings.');
+    }
+});
 })();
 </script>
 </body>

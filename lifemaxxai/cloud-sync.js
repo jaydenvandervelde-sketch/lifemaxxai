@@ -74,8 +74,30 @@
       else { localStorage.removeItem(URL_KEY); localStorage.removeItem(ANON_KEY); }
       location.reload(); // reload so db.js picks up the new keys everywhere
     };
-    var dc = document.getElementById('csDisconnect');
-    if (dc) dc.onclick = function () { localStorage.removeItem(URL_KEY); localStorage.removeItem(ANON_KEY); location.reload(); };
-    function close() { ov.remove(); }
-  }
+   var dc = document.getElementById('csDisconnect');
+  if (dc) dc.onclick = function () { localStorage.removeItem(URL_KEY); localStorage.removeItem(ANON_KEY); location.reload(); };
+  function close() { ov.remove(); }
+
+  window.syncWhoop = function() {
+    // Your WHOOP Client ID from the developer portal
+    const clientId = "e965a759-3a54-43c1-b112-24ce87225b08";
+    
+    // Automatically detects if you are on localhost or live on Vercel
+    const currentDomain = window.location.origin; 
+    
+    // Target route pointing directly to your api/whoop serverless backend
+    const redirectUrl = `${currentDomain}/api/whoop/callback`;
+    const redirectUri = encodeURIComponent(redirectUrl);
+    
+    // OAuth scopes required to access biometric data from the band
+    const scopes = encodeURIComponent("offline read:recovery read:sleep read:workout");
+    
+    // Construct the official secure WHOOP Authorization URL
+    const whoopAuthUrl = `https://whoop.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scopes}`;
+    
+    // Redirect the user to the normal WHOOP login screen
+    window.location.href = whoopAuthUrl;
+  };
+}
+
 })();
