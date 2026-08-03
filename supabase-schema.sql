@@ -32,5 +32,26 @@ create policy "progress read"   on storage.objects for select using (bucket_id =
 create policy "progress write"  on storage.objects for insert with check (bucket_id = 'progress-photos');
 create policy "progress delete" on storage.objects for delete using (bucket_id = 'progress-photos');
 
+-- 4) WHOOP TOKENS — optional server-side persistence for the WHOOP OAuth refresh
+--    token, written only by the /api/whoop serverless functions using the
+--    SERVICE ROLE key (never sent to the browser). Deliberately NOT given an
+--    open "using (true)" policy like app_state: the anon/publishable key is
+--    treated as public in this app, and a WHOOP refresh token must not be
+--    readable with it. RLS stays enabled with no policies, so anon and
+--    authenticated clients get zero access; the service role bypasses RLS by
+--    design and is the only way in. Single row (id='default') because this
+--    app is single-tenant per deployment — see the note above.
+create table if not exists user_whoop_tokens (
+  id            text primary key default 'default',
+  access_token  text,
+  refresh_token text not null,
+  expires_at    timestamptz,
+  updated_at    timestamptz default now()
+);
+alter table user_whoop_tokens enable row level security;
+
 -- Done. Now copy your Project URL + anon public key (Settings → API)
 -- into the app's  Settings → Cloud sync.
+-- For WHOOP token persistence, also set SUPABASE_SERVICE_ROLE_KEY (Settings →
+-- API → service_role secret) as a Vercel environment variable — server-side
+-- only, never commit it or expose it to the browser.

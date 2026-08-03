@@ -39,7 +39,9 @@ module.exports = async (req, res) => {
   res.setHeader('content-type', 'application/json');
   const cookies = L.parseCookies(req);
   const secure = L.isHttps(req);
-  const refresh = cookies.whoop_refresh;
+  const useSupabase = L.whoopTokensConfigured();
+  const stored = useSupabase ? await L.getWhoopTokens().catch(() => null) : null;
+  const refresh = useSupabase ? (stored && stored.refresh_token) : cookies.whoop_refresh;
   if (!refresh) { res.statusCode = 200; res.end(JSON.stringify({ connected: false })); return; }
 
   let id, secret;
@@ -51,13 +53,15 @@ module.exports = async (req, res) => {
     tok = await L.tokenRequest({ grant_type: 'refresh_token', refresh_token: refresh, client_id: id, client_secret: secret, scope: 'offline' });
   } catch (e) {
     res.statusCode = 200;
-    res.setHeader('Set-Cookie', L.clearCookie('whoop_refresh', secure));
+    if (useSupabase) await L.deleteWhoopTokens().catch(() => {});
+    else res.setHeader('Set-Cookie', L.clearCookie('whoop_refresh', secure));
     res.end(JSON.stringify({ connected: false, error: 'expired' }));
     return;
   }
   // WHOOP rotates refresh tokens — persist the new one.
   if (tok.refresh_token && tok.refresh_token !== refresh) {
-    res.setHeader('Set-Cookie', L.cookie('whoop_refresh', tok.refresh_token, { maxAge: 60 * 60 * 24 * 365, secure }));
+    if (useSupabase) await L.upsertWhoopTokens(tok).catch(() => {});
+    else res.setHeader('Set-Cookie', L.cookie('whoop_refresh', tok.refresh_token, { maxAge: 60 * 60 * 24 * 365, secure }));
   }
   const at = tok.access_token;
 

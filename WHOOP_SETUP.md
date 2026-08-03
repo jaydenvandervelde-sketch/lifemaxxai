@@ -12,12 +12,13 @@ Opened as a local file, the dashboard falls back to **Apple Watch / Manual** ent
 1. **Create a WHOOP app** at <https://developer.whoop.com> → Developer Dashboard → *Create app*.
 2. Note the **Client ID** and **Client Secret**.
 3. Add a **Redirect URL** to the app, matching your deployment exactly:
-   - Production: `https://YOUR-APP.vercel.app/api/whoop/callback`
+   - Production: `https://lifemaxxai.vercel.app/api/whoop/callback` (pinned in [`_lib.js`](api/whoop/_lib.js) — update that constant too if your production domain differs)
    - Local (`vercel dev`): `http://localhost:3000/api/whoop/callback`
 4. Request scopes: `read:recovery`, `read:sleep`, `read:cycles`, `read:profile`, `offline`.
 5. In **Vercel → Project → Settings → Environment Variables**, set:
    - `WHOOP_CLIENT_ID`
    - `WHOOP_CLIENT_SECRET`
+   - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` *(optional — persists the refresh token server-side in Supabase instead of an httpOnly cookie; run [`supabase-schema.sql`](supabase-schema.sql) first. The service role key is server-only — never commit it or expose it to the browser. Without it, the app falls back to the cookie exactly as before.)*
 
    (See [`.env.example`](.env.example). For local dev, put the same in a `.env`.)
 6. Redeploy. Open the dashboard → **Today's vitals → Whoop → Connect Whoop**.
@@ -27,7 +28,7 @@ Opened as a local file, the dashboard falls back to **Apple Watch / Manual** ent
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/whoop/login` | Redirects to WHOOP's login/consent screen (with a CSRF `state`). |
-| `GET /api/whoop/callback` | Exchanges the code for tokens; stores the **refresh token** in an httpOnly cookie. |
+| `GET /api/whoop/callback` | Exchanges the code for tokens; stores the **refresh token** in Supabase (`user_whoop_tokens`, service-role only) if configured, otherwise an httpOnly cookie. |
 | `GET /api/whoop/data` | Refreshes the access token (rotating the refresh token), fetches latest recovery/sleep/cycle, returns vitals. |
 | `GET /api/whoop/logout` | Forgets the stored token (disconnect). |
 
