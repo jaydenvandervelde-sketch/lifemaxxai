@@ -13,7 +13,14 @@ function getOrigin(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host;
   return proto + '://' + host;
 }
-function redirectUri(req) { return getOrigin(req) + '/api/whoop/callback'; }
+function redirectUri(req) {
+  // Production is pinned to the canonical domain: building this from req.headers.host
+  // instead would send whatever host the request arrived on to WHOOP, and that has to
+  // match a redirect URI registered in the WHOOP developer app exactly or their
+  // Hydra-backed OAuth server rejects it with invalid_request.
+  if (process.env.VERCEL_ENV === 'production') return 'https://lifemaxxai.vercel.app/api/whoop/callback';
+  return getOrigin(req) + '/api/whoop/callback';
+}
 function isHttps(req) { return getOrigin(req).startsWith('https'); }
 
 function parseCookies(req) {
