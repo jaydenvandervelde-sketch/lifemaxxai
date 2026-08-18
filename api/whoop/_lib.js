@@ -1,12 +1,12 @@
 // Shared helpers for the WHOOP OAuth serverless functions (Vercel, Node runtime).
-// The client secret lives only here (server-side, from env). Tokens are kept in
-// httpOnly cookies — never exposed to the browser. No database required.
+// Tokens are stored server-side in public.user_oauth_tokens, never sent to the browser.
 const crypto = require('crypto');
 
 const AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
 const TOKEN_URL = 'https://api.prod.whoop.com/oauth/oauth2/token';
 const API_BASE = 'https://api.prod.whoop.com/developer';
 const SCOPE = 'read:recovery read:sleep read:cycles read:profile offline';
+const PROVIDER = 'whoop';
 
 function getOrigin(req) {
   const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
@@ -14,10 +14,6 @@ function getOrigin(req) {
   return proto + '://' + host;
 }
 function redirectUri(req) {
-  // Production is pinned to the canonical domain: building this from req.headers.host
-  // instead would send whatever host the request arrived on to WHOOP, and that has to
-  // match a redirect URI registered in the WHOOP developer app exactly or their
-  // Hydra-backed OAuth server rejects it with invalid_request.
   if (process.env.VERCEL_ENV === 'production') return 'https://lifemaxxai.vercel.app/api/whoop/callback';
   return getOrigin(req) + '/api/whoop/callback';
 }
@@ -58,59 +54,129 @@ async function tokenRequest(params) {
   return j;
 }
 
-// Optional server-side persistence for WHOOP tokens in Supabase, so they survive
-// across devices and serverless cold starts instead of living only in a cookie.
-// This app is single-tenant per deployment (see supabase-schema.sql — "your
-// project's keys are your identity"), so this is a singleton row, not a per-user
-// table. Uses the SERVICE ROLE key (server-only env var) so the table can stay
-// locked down to anon/authenticated clients via RLS — unlike the browser-writable
-// app_state table, WHOOP refresh tokens must never be reachable with the public
-// anon key. Falls back to the httpOnly cookie when Supabase isn't configured, so
-// forks without it keep working exactly as before.
-const WHOOP_TOKENS_ROW_ID = 'default';
 function supabaseConfig() {
   const url = (process.env.SUPABASE_URL || '').trim();
   const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
   return url && key ? { url, key } : null;
 }
-async function supabaseRest(path, opts) {
+function getSupabaseAnonKey() {
+  return (process.env.SUPABASE_ANON_KEY || '').trim();
+}
+function getBearerToken(req) {
+  const auth = req.headers.authorization || req.headers.Authorization || '';
+  if (typeof auth === 'string' && auth.toLowerCase().startsWith('bearer ')) return auth.slice(7).trim();
+  const cookies = parseCookies(req);
+  for (const key of Object.keys(cookies)) {
+    if (key === 'supabase-auth-token' || key === 'sb-access-token' || key === 'sb-portal-auth-token' || key.indexOf('sb-') === 0 && key.indexOf('-auth-token') > 0) {
+      const v = cookies[key];
+      if (v && v.indexOf('.') > 0) return v;
+    }
+  }
+  return '';
+}
+async function getAuthenticatedUser(req) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+  const url = (process.env.SUPABASE_URL || '').trim();
+  if (!url) return null;
+  const anon = getSupabaseAnonKey();
+  const r = await fetch(url + '/auth/v1/user', {
+    method: 'GET',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      apikey: anon || process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      Accept: 'application/json',
+    },
+  });
+  if (!r.ok) return null;
+  const body = await r.json().catch(() => null);
+  if (!body || !body.id) return null;
+  return { userId: body.id, accessToken: token };
+}
+async function requireAuth(req) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    const err = new Error('AUTH_REQUIRED');
+    err.status = 401;
+    throw err;
+  }
+  return user;
+}
+async function authUserTokenRow(userId, provider) {
   const cfg = supabaseConfig();
   if (!cfg) return null;
-  const r = await fetch(cfg.url + '/rest/v1' + path, Object.assign({
-    headers: Object.assign({
+  const url = cfg.url + '/rest/v1/user_oauth_tokens?user_id=eq.' + encodeURIComponent(userId) + '&provider=eq.' + encodeURIComponent(provider) + '&select=*';
+  const r = await fetch(url, {
+    method: 'GET',
+    headers: {
       apikey: cfg.key,
       Authorization: 'Bearer ' + cfg.key,
-      'content-type': 'application/json',
-    }, (opts && opts.headers) || {}),
-  }, opts));
-  if (!r.ok) { const t = await r.text().catch(() => ''); const e = new Error('supabase ' + r.status + ' ' + t); e.status = r.status; throw e; }
-  return r.status === 204 ? null : r.json().catch(() => null);
-}
-function whoopTokensConfigured() { return !!supabaseConfig(); }
-async function getWhoopTokens() {
-  const rows = await supabaseRest('/user_whoop_tokens?id=eq.' + WHOOP_TOKENS_ROW_ID + '&select=refresh_token,access_token,expires_at', { method: 'GET' });
-  return rows && rows[0] ? rows[0] : null;
-}
-async function upsertWhoopTokens(tok) {
-  const expiresAt = tok.expires_in ? new Date(Date.now() + tok.expires_in * 1000).toISOString() : null;
-  await supabaseRest('/user_whoop_tokens', {
-    method: 'POST',
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({
-      id: WHOOP_TOKENS_ROW_ID,
-      access_token: tok.access_token || null,
-      refresh_token: tok.refresh_token,
-      expires_at: expiresAt,
-      updated_at: new Date().toISOString(),
-    }),
+      Accept: 'application/json',
+    },
   });
+  if (!r.ok) return null;
+  const rows = await r.json().catch(() => []);
+  return Array.isArray(rows) && rows[0] ? rows[0] : null;
 }
-async function deleteWhoopTokens() {
-  await supabaseRest('/user_whoop_tokens?id=eq.' + WHOOP_TOKENS_ROW_ID, { method: 'DELETE' });
+async function upsertUserTokenRow(userId, provider, tokens) {
+  const cfg = supabaseConfig();
+  if (!cfg) return null;
+  const expiresAt = tokens.expires_in ? new Date(Date.now() + Number(tokens.expires_in) * 1000).toISOString() : null;
+  const payload = {
+    user_id: userId,
+    provider,
+    access_token: tokens.access_token || null,
+    refresh_token: tokens.refresh_token || null,
+    token_type: tokens.token_type || null,
+    scope: tokens.scope || null,
+    expires_at: expiresAt,
+    updated_at: new Date().toISOString(),
+  };
+  const qs = new URLSearchParams({ on_conflict: 'user_id,provider' }).toString();
+  const r = await fetch(cfg.url + '/rest/v1/user_oauth_tokens?' + qs, {
+    method: 'POST',
+    headers: {
+      apikey: cfg.key,
+      Authorization: 'Bearer ' + cfg.key,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error('upsert user oauth token failed');
+  return payload;
+}
+async function deleteUserTokenRow(userId, provider) {
+  const cfg = supabaseConfig();
+  if (!cfg) return null;
+  const url = cfg.url + '/rest/v1/user_oauth_tokens?user_id=eq.' + encodeURIComponent(userId) + '&provider=eq.' + encodeURIComponent(provider);
+  const r = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      apikey: cfg.key,
+      Authorization: 'Bearer ' + cfg.key,
+      Accept: 'application/json',
+    },
+  });
+  return r.ok;
+}
+function stateCookieValue(userId, rawState) {
+  return userId + ':' + rawState;
+}
+function parseStateCookie(req, cookieName) {
+  const cookies = parseCookies(req);
+  const raw = cookies[cookieName];
+  if (!raw) return null;
+  const i = raw.indexOf(':');
+  if (i <= 0) return null;
+  return { userId: raw.slice(0, i), state: raw.slice(i + 1) };
 }
 
 module.exports = {
-  crypto, AUTH_URL, TOKEN_URL, API_BASE, SCOPE, getOrigin, redirectUri, isHttps,
+  crypto, AUTH_URL, TOKEN_URL, API_BASE, SCOPE, PROVIDER, getOrigin, redirectUri, isHttps,
   parseCookies, cookie, clearCookie, creds, tokenRequest,
-  whoopTokensConfigured, getWhoopTokens, upsertWhoopTokens, deleteWhoopTokens,
+  getBearerToken, getAuthenticatedUser, requireAuth,
+  supabaseConfig, authUserTokenRow, upsertUserTokenRow, deleteUserTokenRow,
+  stateCookieValue, parseStateCookie,
 };

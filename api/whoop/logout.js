@@ -1,10 +1,18 @@
-// GET /api/whoop/logout — forgets the stored WHOOP refresh token (disconnect).
+// GET /api/whoop/logout — disconnects the authenticated user's WHOOP token.
 const L = require('./_lib');
 
 module.exports = async (req, res) => {
   const secure = L.isHttps(req);
-  if (L.whoopTokensConfigured()) await L.deleteWhoopTokens().catch(() => {});
-  res.setHeader('Set-Cookie', [L.clearCookie('whoop_refresh', secure), L.clearCookie('whoop_state', secure)]);
+  let auth;
+  try { auth = await L.requireAuth(req); }
+  catch (e) {
+    res.statusCode = 401;
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ connected: false, error: 'auth_required' }));
+    return;
+  }
+  await L.deleteUserTokenRow(auth.userId, L.PROVIDER).catch(() => {});
+  res.setHeader('Set-Cookie', [L.clearCookie('whoop_state', secure)]);
   res.statusCode = 200;
   res.setHeader('content-type', 'application/json');
   res.end(JSON.stringify({ connected: false }));

@@ -1,15 +1,12 @@
-// GET /api/fitbit/data — refreshes the access token (rotating the stored refresh
-// token), fetches recent sleep / resting HR / HRV, and returns a vitals payload
-// in the same shape the suite uses (source:'fitbit'). Same-origin → no CORS.
-//
-// Note: Fitbit has no universal "recovery score" (Daily Readiness is Premium-only
-// and not reliably exposed), so `recovery` is null — sleep, HRV, RHR and the
-// bed/wake times still populate, which is what the day-window + supplements use.
+// GET /api/fitbit/data — refreshes the access token, fetches recent sleep / resting HR / HRV,
+// and returns a vitals payload in the same shape the suite uses (source:'fitbit').
+// Tokens are read only from the authenticated user's row in public.user_oauth_tokens and are
+// never returned to the browser.
 const L = require('./_lib');
 
 function pad2(n) { return String(n).padStart(2, '0'); }
 function dateStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
-function clockOf(iso) { // Fitbit times are local, no tz suffix: "2024-05-30T23:11:30.000"
+function clockOf(iso) {
   const m = String(iso || '').match(/T(\d{2}):(\d{2})/);
   return m ? m[1] + ':' + m[2] : null;
 }
@@ -23,9 +20,16 @@ async function get(path, token) {
 
 module.exports = async (req, res) => {
   res.setHeader('content-type', 'application/json');
-  const cookies = L.parseCookies(req);
-  const secure = L.isHttps(req);
-  const refresh = cookies.fitbit_refresh;
+  let auth;
+  try { auth = await L.requireAuth(req); }
+  catch (e) {
+    res.statusCode = 401;
+    res.end(JSON.stringify({ connected: false, error: 'auth_required' }));
+    return;
+  }
+
+  const stored = await L.authUserTokenRow(auth.userId, L.PROVIDER).catch(() => null);
+  const refresh = stored && stored.refresh_token ? stored.refresh_token : null;
   if (!refresh) { res.statusCode = 200; res.end(JSON.stringify({ connected: false })); return; }
 
   let id;
@@ -37,13 +41,13 @@ module.exports = async (req, res) => {
     tok = await L.tokenRequest({ grant_type: 'refresh_token', refresh_token: refresh });
   } catch (e) {
     res.statusCode = 200;
-    res.setHeader('Set-Cookie', L.clearCookie('fitbit_refresh', secure));
+    await L.deleteUserTokenRow(auth.userId, L.PROVIDER).catch(() => {});
     res.end(JSON.stringify({ connected: false, error: 'expired' }));
     return;
   }
-  // Fitbit rotates refresh tokens — persist the new one.
+
   if (tok.refresh_token && tok.refresh_token !== refresh) {
-    res.setHeader('Set-Cookie', L.cookie('fitbit_refresh', tok.refresh_token, { maxAge: 60 * 60 * 24 * 365, secure }));
+    await L.upsertUserTokenRow(auth.userId, L.PROVIDER, tok).catch(() => {});
   }
   const at = tok.access_token;
 
@@ -62,7 +66,6 @@ module.exports = async (req, res) => {
     ? (hrv.hrv[hrv.hrv.length - 1].value || {}).dailyRmssd
     : null;
 
-  // Latest main sleep from the range (fall back to the longest log).
   let main = null;
   if (sleep && Array.isArray(sleep.sleep) && sleep.sleep.length) {
     const logs = sleep.sleep.slice().sort((a, b) => String(b.startTime).localeCompare(String(a.startTime)));
@@ -76,7 +79,7 @@ module.exports = async (req, res) => {
   res.statusCode = 200;
   res.end(JSON.stringify({
     connected: true, source: 'fitbit', ts: Date.now(),
-    recovery: null,                       // Fitbit exposes no universal recovery score
+    recovery: null,
     hrv: dailyRmssd != null ? Math.round(dailyRmssd) : null,
     rhr: rhr != null ? Math.round(rhr) : null,
     sleepPerf,

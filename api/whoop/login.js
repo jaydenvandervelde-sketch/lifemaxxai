@@ -1,7 +1,16 @@
 // GET /api/whoop/login — kicks off the WHOOP OAuth flow (302 → whoop.com login).
 const L = require('./_lib');
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
+  let auth;
+  try { auth = await L.requireAuth(req); }
+  catch (e) {
+    res.statusCode = e.status || 401;
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ connected: false, error: 'auth_required' }));
+    return;
+  }
+
   let id;
   try { id = L.creds().id; }
   catch (e) {
@@ -11,8 +20,10 @@ module.exports = (req, res) => {
       + '<h2>WHOOP isn’t configured yet</h2><p>Set <code>WHOOP_CLIENT_ID</code> and <code>WHOOP_CLIENT_SECRET</code> in your Vercel project’s Environment Variables, and register <code>' + L.redirectUri(req) + '</code> as a redirect URL in your WHOOP developer app. See <code>WHOOP_SETUP.md</code>.</p><p><a href="/">← back to the dashboard</a></p></body>');
     return;
   }
+
   const state = L.crypto.randomBytes(12).toString('hex');
-  res.setHeader('Set-Cookie', L.cookie('whoop_state', state, { maxAge: 600, secure: L.isHttps(req) }));
+  const cookieVal = L.stateCookieValue(auth.userId, state);
+  res.setHeader('Set-Cookie', L.cookie('whoop_state', cookieVal, { maxAge: 600, secure: L.isHttps(req) }));
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: id,

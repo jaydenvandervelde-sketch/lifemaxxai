@@ -1,6 +1,6 @@
 // GET /api/fitbit/callback — Fitbit redirects here with ?code & ?state.
-// Verifies state, exchanges the code for tokens (server-side, with the secret),
-// stores the refresh token in an httpOnly cookie, and returns to the dashboard.
+// Verifies state, ensures the request is for the authenticated user, exchanges the
+// code for tokens server-side, and stores only server-side token rows tied to auth.uid().
 const L = require('./_lib');
 
 module.exports = async (req, res) => {
@@ -9,12 +9,18 @@ module.exports = async (req, res) => {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const oauthErr = url.searchParams.get('error');
-  const cookies = L.parseCookies(req);
   const secure = L.isHttps(req);
   const back = (status) => { res.statusCode = 302; res.setHeader('Location', '/?fitbit=' + status); res.end(); };
 
   if (oauthErr) return back('denied');
-  if (!code || !state || state !== cookies.fitbit_state) return back('error');
+  let auth;
+  try { auth = await L.requireAuth(req); }
+  catch (e) {
+    return back('error');
+  }
+
+  const cookieState = L.parseStateCookie(req, 'fitbit_state');
+  if (!code || !state || !cookieState || cookieState.userId !== auth.userId || cookieState.state !== state) return back('error');
 
   let id;
   try { ({ id } = L.creds()); }
@@ -27,9 +33,10 @@ module.exports = async (req, res) => {
       client_id: id,
       redirect_uri: L.redirectUri(req),
     });
-    const out = [L.clearCookie('fitbit_state', secure)];
-    if (tok.refresh_token) out.push(L.cookie('fitbit_refresh', tok.refresh_token, { maxAge: 60 * 60 * 24 * 365, secure }));
-    res.setHeader('Set-Cookie', out);
+    if (tok.refresh_token) {
+      await L.upsertUserTokenRow(auth.userId, L.PROVIDER, tok);
+    }
+    res.setHeader('Set-Cookie', [L.clearCookie('fitbit_state', secure)]);
     return back(tok.refresh_token ? 'connected' : 'error');
   } catch (e) {
     return back('error');

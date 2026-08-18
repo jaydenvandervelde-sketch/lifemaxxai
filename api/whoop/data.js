@@ -1,8 +1,6 @@
-// GET /api/whoop/data — refreshes the access token (rotating the stored refresh
-// token), fetches recent recovery / sleep / cycle, and returns a vitals payload:
-//   • latest scalars (recovery, hrv, rhr, sleepPerf, sleepHours, strain) — used by the hub
-//   • short history arrays (recoveryTrend, sleepDebt7d, strainWeeklyAvg) — used by whoop.html
-// Same-origin, so the browser hits it with no CORS.
+// GET /api/whoop/data — refreshes the access token, fetches recent recovery / sleep / cycle,
+// and returns a vitals payload. Tokens are read only from the authenticated user's row in
+// public.user_oauth_tokens and never returned to the browser.
 const L = require('./_lib');
 
 function pick(obj, paths) {
@@ -37,11 +35,16 @@ function asleepHours(slp) {
 
 module.exports = async (req, res) => {
   res.setHeader('content-type', 'application/json');
-  const cookies = L.parseCookies(req);
-  const secure = L.isHttps(req);
-  const useSupabase = L.whoopTokensConfigured();
-  const stored = useSupabase ? await L.getWhoopTokens().catch(() => null) : null;
-  const refresh = useSupabase ? (stored && stored.refresh_token) : cookies.whoop_refresh;
+  let auth;
+  try { auth = await L.requireAuth(req); }
+  catch (e) {
+    res.statusCode = 401;
+    res.end(JSON.stringify({ connected: false, error: 'auth_required' }));
+    return;
+  }
+
+  const stored = await L.authUserTokenRow(auth.userId, L.PROVIDER).catch(() => null);
+  const refresh = stored && stored.refresh_token ? stored.refresh_token : null;
   if (!refresh) { res.statusCode = 200; res.end(JSON.stringify({ connected: false })); return; }
 
   let id, secret;
@@ -53,15 +56,13 @@ module.exports = async (req, res) => {
     tok = await L.tokenRequest({ grant_type: 'refresh_token', refresh_token: refresh, client_id: id, client_secret: secret, scope: 'offline' });
   } catch (e) {
     res.statusCode = 200;
-    if (useSupabase) await L.deleteWhoopTokens().catch(() => {});
-    else res.setHeader('Set-Cookie', L.clearCookie('whoop_refresh', secure));
+    await L.deleteUserTokenRow(auth.userId, L.PROVIDER).catch(() => {});
     res.end(JSON.stringify({ connected: false, error: 'expired' }));
     return;
   }
-  // WHOOP rotates refresh tokens — persist the new one.
+
   if (tok.refresh_token && tok.refresh_token !== refresh) {
-    if (useSupabase) await L.upsertWhoopTokens(tok).catch(() => {});
-    else res.setHeader('Set-Cookie', L.cookie('whoop_refresh', tok.refresh_token, { maxAge: 60 * 60 * 24 * 365, secure }));
+    await L.upsertUserTokenRow(auth.userId, L.PROVIDER, tok).catch(() => {});
   }
   const at = tok.access_token;
 
@@ -79,7 +80,6 @@ module.exports = async (req, res) => {
   const sleepHours = asleepHours(slp);
   const strain = pick(cyc, ['score.strain', 'strain']);
 
-  // History (oldest → newest) for the standalone's trend + sleep-debt views.
   const recoveryTrend = recs.map(r => pick(r, ['score.recovery_score', 'recovery_score'])).filter(v => v != null).reverse();
   const sleepDebt7d = slps.map(s => {
     const start = pick(s, ['start']);
