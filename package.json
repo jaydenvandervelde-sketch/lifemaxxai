@@ -1,0 +1,21 @@
+{
+  "name": "lifemaxxai",
+  "version": "1.0.0",
+  "description": "A suite of nine single-file apps tied together by one bento **hub** (`index.html`),\r one design system (\"Patron\" — soft-dark electric-violet), and one shared theme.\r Fork it, deploy it (or just open it), make it yours.",
+  "main": "cloud-sync.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaydenvandervelde-sketch/lifemaxxai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jaydenvandervelde-sketch/lifemaxxai/issues"
+  },
+  "homepage": "https://github.com/jaydenvandervelde-sketch/lifemaxxai#readme"
+}

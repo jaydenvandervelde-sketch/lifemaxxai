@@ -183,7 +183,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
         }, { onConflict: 'id' });
         // Data confirmed written — clear then redirect immediately
         localStorage.removeItem('pendingOnboardingData');
-        window.location.href = 'https://lifemaxxai.vercel.app/';
+        window.location.href = 'index.html';
         return;
       } catch (_) {
         // Upsert failed — still clear so stale data doesn't persist
@@ -191,7 +191,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
       }
     }
     // Fallback: no pending data or Supabase unavailable — go straight to the app
-    window.location.href = 'https://lifemaxxai.vercel.app/';
+    window.location.href = 'index.html';
   }
 
   // ----- UI helpers -----
@@ -265,7 +265,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
       if (data.user && data.session) {
         showOverlay('Account created! Saving your plan…');
         await handlePostAuth(data.user);
-        window.location.href = 'https://lifemaxxai.vercel.app/';
+        window.location.href = 'index.html';
       } else {
         showMsg('Check your email to confirm your account, then sign in.');
       }
@@ -276,7 +276,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
       if (error) return showErr(error.message);
       showOverlay('Signed in! Loading your plan…');
       await handlePostAuth(data.user);
-      window.location.href = 'https://lifemaxxai.vercel.app/';
+      window.location.href = 'index.html';
     }
   });
 
@@ -298,7 +298,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
         handled = true;
         showOverlay('Signed in! Saving your plan…');
         await handlePostAuth(session.user);
-        window.location.href = 'https://lifemaxxai.vercel.app/';
+        window.location.href = 'index.html';
       }
     });
 
@@ -308,7 +308,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
       handled = true;
       showOverlay('Signed in! Saving your plan…');
       await handlePostAuth(data.session.user);
-      window.location.href = 'https://lifemaxxai.vercel.app/';
+      window.location.href = 'index.html';
     }
   }
 
