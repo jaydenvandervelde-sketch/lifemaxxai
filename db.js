@@ -19,61 +19,113 @@
  * (Gym → ⚙ Settings → Cloud sync).
  * ============================================================ */
 window.PatronDB = (function () {
-  // Key resolution order (first non-empty wins):
-  //   1. localStorage override (user pasted their own keys via ☁ panel)
-  //   2. /api/config         (this deploy's Vercel env vars — keys live there,
-  //                           NOT in this repo, so nothing is committed publicly)
-  // No keys are hardcoded here. A fresh deploy with no env vars set stays
-  // local-only until the user adds keys (env var or the ☁ panel).
+  // Auth is now the identity boundary. The browser only needs the public anon key.
+  // Project keys are no longer treated as the user's identity, and cloud sync is
+  // user-scoped: each app_state row is owned by auth.uid().
   const _ovUrl = (localStorage.getItem('po_supabase_url') || '').trim();
   const _ovKey = (localStorage.getItem('po_supabase_key') || '').trim();
 
-  // Baked-in project keys so every device (phone + PC) connects automatically
-  // with no pasting. A localStorage override still wins if the user sets one.
-  const BAKED_URL = 'https://abmhilbhbkzsimopyuwq.supabase.co';
-  const BAKED_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFibWhpbGJoYmt6c2ltb3B5dXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDY3NjAsImV4cCI6MjA5NTg4Mjc2MH0.ZFW7nxQhNnQmobPvHZaK19dj1ITJZqBKJ1g2GQzwwKM';
-
-  let URL = _ovUrl || BAKED_URL;
-  let KEY = _ovKey || BAKED_KEY;
+  let URL = _ovUrl || (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') || '';
+  let KEY = _ovKey || (typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : '') || '';
   let ready = false;
   let sb = null;
   let _syncStarted = false;
+  let _userId = null;
+
+  async function _currentUserId() {
+    if (!sb) return null;
+    try {
+      const { data: { session }, error } = await sb.auth.getSession();
+      if (error || !session || !session.user) return null;
+      return session.user.id;
+    } catch (_) {
+      return null;
+    }
+  }
 
   function _connect(u, k) {
     ready = !!(u && k && window.supabase && u.indexOf('PASTE-') !== 0);
-    sb = ready ? window.supabase.createClient(u, k) : null;
+    sb = ready ? window.supabase.createClient(u, k, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    }) : null;
   }
-  // Starts the universal syncer once we have a live cloud connection. Idempotent.
-  function _startSync() {
-    if (_syncStarted || !ready) return;
-    _syncStarted = true;
-    _autoSync();
-  }
-  _connect(URL, KEY); // synchronous boot — identical behavior to before
 
-  // If the user hasn't pasted their own keys, fetch this deploy's config from the
-  // server (Vercel env vars) and connect. Forkers with no env vars set get
-  // {url:'',key:''} → app stays local-only until they add their own keys.
-  (async function _loadConfig() {
-    if (_ovUrl && _ovKey) return; // user override already wins
+  async function _ensureSession() {
+    if (!sb) return false;
+    const userId = await _currentUserId();
+    if (!userId) {
+      ready = false;
+      _userId = null;
+      return false;
+    }
+    ready = true;
+    _userId = userId;
+    return true;
+  }
+
+  async function _loadApiConfigIfNeeded() {
+    if ((_ovUrl && _ovKey) || !window.fetch) return;
     try {
       const r = await fetch('/api/config', { cache: 'no-store' });
       if (!r.ok) return;
       const cfg = await r.json();
-      const u = (cfg && cfg.url || '').trim(), k = (cfg && cfg.key || '').trim();
-      if (u && k && (u !== URL || k !== KEY)) { URL = u; KEY = k; _connect(u, k); _startSync(); }
+      const u = (cfg && cfg.url || '').trim();
+      const k = (cfg && cfg.key || '').trim();
+      if (u && k && (u !== URL || k !== KEY)) {
+        URL = u;
+        KEY = k;
+        _connect(u, k);
+      }
     } catch (_) {}
-  })();
+  }
 
-  function isCloud() { return ready; }
+  async function _migrateLocalStorageToUser() {
+    if (!sb) return;
+    const userId = await _currentUserId();
+    if (!userId) return;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || key.indexOf('po_supabase_') === 0 || key.indexOf('patron_db_') === 0 || key.indexOf('patron_hydrated_') === 0 || key === 'patron_theme') continue;
+      const raw = localStorage.getItem(key);
+      if (raw == null) continue;
+      let val;
+      try { val = JSON.parse(raw); } catch (_) { val = raw; }
+      try {
+        await sb.from('app_state').upsert({
+          user_id: userId,
+          key,
+          data: val,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,key' });
+      } catch (_) {}
+    }
+  }
+
+  async function _initializeCloud() {
+    if (!URL || !KEY) return;
+    _connect(URL, KEY);
+    const ok = await _ensureSession();
+    if (ok) {
+      await _migrateLocalStorageToUser();
+      _startSync();
+    }
+  }
+
+  _initializeCloud();
+
+  function isCloud() { return !!sb && !!_userId; }
   function cfgUrl() { return URL || ''; }
   function cfgKey() { return KEY || ''; }
 
   /* ---- read a blob by key (cloud if configured, else this browser) ---- */
   async function get(key) {
-    if (!sb) return _local(key);
+    if (!sb || !_userId) return _local(key);
     try {
-      const { data, error } = await sb.from('app_state').select('data').eq('key', key).maybeSingle();
+      const { data, error } = await sb.from('app_state').select('data').eq('user_id', _userId).eq('key', key).maybeSingle();
       if (!error && data && data.data) return data.data;
     } catch (_) {}
     return _local(key); // fall back if the network/row is missing
@@ -82,21 +134,21 @@ window.PatronDB = (function () {
   /* ---- write a blob by key (saves to cloud AND this browser) ---- */
   async function set(key, value) {
     _saveLocal(key, value); // always keep a local copy
-    if (!sb) return;
+    if (!sb || !_userId) return;
     try {
       await sb.from('app_state').upsert(
-        { key, data: value, updated_at: new Date().toISOString() },
-        { onConflict: 'key' }
+        { user_id: _userId, key, data: value, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,key' }
       );
     } catch (_) {}
   }
 
   /* ---- live updates from other devices ---- */
   function subscribe(key, cb) {
-    if (!sb) return function () {};
-    const ch = sb.channel('app_state_' + key)
+    if (!sb || !_userId) return function () {};
+    const ch = sb.channel('app_state_' + _userId + '_' + key)
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'app_state', filter: 'key=eq.' + key },
+        { event: '*', schema: 'public', table: 'app_state', filter: 'user_id=eq.' + _userId + '&key=eq.' + key },
         payload => { if (payload.new && payload.new.data) cb(payload.new.data); })
       .subscribe();
     return function () { try { sb.removeChannel(ch); } catch (_) {} };
@@ -142,19 +194,19 @@ window.PatronDB = (function () {
       || k === 'patron_theme';               // theme is a per-device preference
   }
   async function _cloudGet(key) {
-    if (!sb) return undefined;
-    try { const { data, error } = await sb.from('app_state').select('data').eq('key', key).maybeSingle(); if (!error && data) return data.data; } catch (_) {}
+    if (!sb || !_userId) return undefined;
+    try { const { data, error } = await sb.from('app_state').select('data').eq('user_id', _userId).eq('key', key).maybeSingle(); if (!error && data) return data.data; } catch (_) {}
     return undefined;
   }
   function _cloudSet(key, value) {
-    if (!sb) return;
-    try { sb.from('app_state').upsert({ key, data: value, updated_at: new Date().toISOString() }, { onConflict: 'key' }); } catch (_) {}
+    if (!sb || !_userId) return;
+    try { sb.from('app_state').upsert({ user_id: _userId, key, data: value, updated_at: new Date().toISOString() }, { onConflict: 'user_id,key' }); } catch (_) {}
   }
   // Every cloud row, as a {key: data} map. One round-trip to reconcile everything.
   async function _cloudGetAll() {
     const m = {};
-    if (!sb) return m;
-    try { const { data, error } = await sb.from('app_state').select('key,data'); if (!error && data) data.forEach(function (r) { m[r.key] = r.data; }); } catch (_) {}
+    if (!sb || !_userId) return m;
+    try { const { data, error } = await sb.from('app_state').select('key,data').eq('user_id', _userId); if (!error && data) data.forEach(function (r) { m[r.key] = r.data; }); } catch (_) {}
     return m;
   }
   // Canonicalize a JSON string so key-order differences don't look like edits.
@@ -241,6 +293,11 @@ window.PatronDB = (function () {
           if (changed && !_didInitialReload()) { _markInitialReload(); location.reload(); return; }
         }
       } catch (_) {}
+
+      // If the user is not authenticated, we keep localStorage as the source of
+      // truth and avoid talking to the cloud at all. This preserves the existing
+      // offline behavior while the Auth migration is being rolled out.
+      if (!await _ensureSession()) return;
       // Keep pushing your saves up continuously. NEVER reloads — so typing is safe.
       setInterval(pushChanged, 2000);
       // Pull other devices' edits when you return to this tab. We update

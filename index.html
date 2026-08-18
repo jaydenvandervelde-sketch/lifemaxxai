@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="icon" type="image/svg+xml" href="icon.svg" />
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style id="pwa-mobile">
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{overflow-x:hidden;-webkit-tap-highlight-color:transparent}
@@ -255,6 +256,68 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui), -ap
 </main>
 <div id="modalRoot"></div>
 <script>
+(function() {
+  const readConfig = async function() {
+    try {
+      const res = await fetch('/api/config', { cache: 'no-store' });
+      if (!res.ok) return { url: '', key: '' };
+      return await res.json();
+    } catch (_) {
+      return { url: '', key: '' };
+    }
+  };
+
+  window.__lifemaxxaiAuth = { sb: null, session: null, user: null };
+
+  async function ensureAuthGuard() {
+    const url = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '').trim();
+    const key = (typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : '').trim();
+    const cfg = (!url || !key) ? await readConfig() : { url, key };
+    const clientUrl = (cfg.url || '').trim();
+    const clientKey = (cfg.key || '').trim();
+
+    if (!window.supabase || !clientUrl || !clientKey) {
+      return;
+    }
+
+    const client = window.supabase.createClient(clientUrl, clientKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
+
+    const { data, error } = await client.auth.getSession();
+    if (error || !data || !data.session || !data.session.user) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    window.__lifemaxxaiAuth = {
+      sb: client,
+      session: data.session,
+      user: data.session.user
+    };
+
+    let profile = null;
+    try {
+      const res = await client.from('profiles').select('*').eq('id', data.session.user.id).maybeSingle();
+      if (!res.error && res.data) profile = res.data;
+      else if (!res.error) {
+        await client.from('profiles').upsert({
+          id: data.session.user.id,
+          name: data.session.user.email ? data.session.user.email.split('@')[0] : 'User',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+      }
+    } catch (_) {}
+
+    window.__lifemaxxaiProfile = profile;
+  }
+
+  ensureAuthGuard();
+})();
 /* ============================================================
  * Apps in the suite — one bento card each.
  * ============================================================ */

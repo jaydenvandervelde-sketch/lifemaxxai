@@ -139,7 +139,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
   let mode = 'signin'; // 'signin' | 'signup'
 
   // ----- Supabase init -----
-  // Priority: hardcoded globals → localStorage override → /api/config
+  // Priority: hardcoded globals → localStorage override → /api/config.
+  // We still use the public anon key for the browser, but authentication is now
+  // the real identity boundary; project keys are never treated as the user.
   async function initSupabase() {
     let url = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '').trim();
     let key = (typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : '').trim();
@@ -161,36 +163,49 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
     }
 
     if (url && key && window.supabase) {
-      sb = window.supabase.createClient(url, key);
+      sb = window.supabase.createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
     }
   }
 
   // ----- post-auth handler -----
   async function handlePostAuth(user) {
     const raw = localStorage.getItem('pendingOnboardingData');
-    if (raw && sb) {
+    if (sb) {
       try {
-        const d = JSON.parse(raw);
-        await sb.from('profiles').upsert({
+        const profilePayload = {
           id: user.id,
-          name: d.name,
-          age: d.age,
-          sex: d.sex,
-          height_cm: d.heightCm,
-          weight_kg: d.weightKg,
-          active_hours_per_week: d.activeHoursPerWeek,
           updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
-        // Data confirmed written — clear then redirect immediately
-        localStorage.removeItem('pendingOnboardingData');
-        window.location.href = 'index.html';
-        return;
+        };
+
+        if (raw) {
+          const d = JSON.parse(raw);
+          Object.assign(profilePayload, {
+            name: d.name || null,
+            age: d.age ?? null,
+            sex: d.sex || null,
+            height_cm: d.heightCm ?? null,
+            weight_kg: d.weightKg ?? null,
+            active_hours_per_week: d.activeHoursPerWeek ?? null
+          });
+        }
+
+        await sb.from('profiles').upsert(profilePayload, { onConflict: 'id' });
+
+        // If the user had legacy local profile data, keep it in localStorage, but
+        // attach it to the authenticated user in Supabase as the first cloud copy.
+        if (raw) localStorage.removeItem('pendingOnboardingData');
       } catch (_) {
-        // Upsert failed — still clear so stale data doesn't persist
-        localStorage.removeItem('pendingOnboardingData');
+        if (raw) localStorage.removeItem('pendingOnboardingData');
       }
     }
-    // Fallback: no pending data or Supabase unavailable — go straight to the app
+
+    // Fallback: no pending data or Supabase unavailable — go straight to the app.
     window.location.href = 'index.html';
   }
 
@@ -311,6 +326,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle
       window.location.href = 'index.html';
     }
   }
+
+  // If a user is already signed in, send them to the dashboard without asking them
+  // to sign in again. This preserves the session as the true app identity.
+  window.addEventListener('load', () => {
+    if (window.supabase) {
+      initSupabase().then(() => {
+        if (!sb) return;
+        sb.auth.getSession().then(({ data }) => {
+          if (data && data.session && data.session.user) {
+            window.location.href = 'index.html';
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+    }
+  });
 
   // ----- boot -----
  initSupabase().then(checkSession);
